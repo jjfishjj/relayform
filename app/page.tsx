@@ -9,6 +9,8 @@ type Tool = {
   method: string;
   path: string;
   risk: "Read" | "Write";
+  inputSchema?: Record<string, unknown>;
+  outputSchema?: Record<string, unknown> | null;
 };
 
 const websiteTools: Tool[] = [
@@ -36,14 +38,18 @@ const icons = {
 
 export default function Home() {
   const [mode, setMode] = useState<SourceMode>("website");
-  const [source, setSource] = useState("https://docs.example.com");
+  const [source, setSource] = useState("https://example.com");
   const [activeView, setActiveView] = useState<"builder" | "definition">("builder");
   const [selected, setSelected] = useState(0);
   const [running, setRunning] = useState(false);
   const [generated, setGenerated] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [detectedTools, setDetectedTools] = useState<Tool[] | null>(null);
+  const [connectorId, setConnectorId] = useState<string | null>(null);
+  const [error, setError] = useState("");
+  const [testResult, setTestResult] = useState("");
 
-  const tools = mode === "website" ? websiteTools : apiTools;
+  const tools = detectedTools || (mode === "website" ? websiteTools : apiTools);
   const selectedTool = tools[Math.min(selected, tools.length - 1)];
   const host = useMemo(() => {
     try { return new URL(source).host || "docs.example.com"; }
@@ -55,35 +61,60 @@ export default function Home() {
     description: selectedTool.description,
     input_schema: {
       type: "object",
-      properties: selectedTool.name === "search_content"
+      properties: (selectedTool.inputSchema?.properties as Record<string, unknown>) || (selectedTool.name === "search_content"
         ? { query: { type: "string", description: "Search phrase" }, limit: { type: "integer", default: 10 } }
-        : { id: { type: "string", description: "Resource identifier" } },
-      required: [selectedTool.name === "search_content" ? "query" : "id"],
+        : { id: { type: "string", description: "Resource identifier" } }),
+      required: (selectedTool.inputSchema?.required as string[]) || [selectedTool.name === "search_content" ? "query" : "id"],
     },
     transport: { type: mode === "website" ? "crawler" : "http", method: selectedTool.method, url: `https://${host}${selectedTool.path}` },
     security: { confirmation: selectedTool.risk === "Write", scope: selectedTool.risk.toLowerCase() },
   }, null, 2);
 
-  function analyze() {
+  async function analyze() {
     setRunning(true);
     setGenerated(false);
-    window.setTimeout(() => {
+    setError("");
+    setTestResult("");
+    try {
+      const response = await fetch("/api/connectors", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ sourceType: mode, sourceUrl: source }) });
+      const payload = await response.json() as { connector?: { id: string; tools: Tool[] }; error?: string };
+      if (!response.ok || !payload.connector) throw new Error(payload.error || "Analysis failed.");
+      setDetectedTools(payload.connector.tools);
+      setConnectorId(payload.connector.id);
       setRunning(false);
       setGenerated(true);
       setSelected(0);
-    }, 850);
+    } catch (analysisError) {
+      setRunning(false);
+      setGenerated(false);
+      setError(analysisError instanceof Error ? analysisError.message : "Analysis failed.");
+    }
   }
 
   function switchMode(next: SourceMode) {
     setMode(next);
     setSelected(0);
-    setSource(next === "website" ? "https://docs.example.com" : "https://api.example.com/openapi.json");
+    setDetectedTools(null);
+    setConnectorId(null);
+    setError("");
+    setTestResult("");
+    setSource(next === "website" ? "https://example.com" : "https://petstore3.swagger.io/api/v3/openapi.json");
   }
 
   async function copyDefinition() {
     await navigator.clipboard?.writeText(definition);
     setCopied(true);
     window.setTimeout(() => setCopied(false), 1200);
+  }
+
+  async function testTool() {
+    if (!connectorId) return;
+    setTestResult("Running read-only test…");
+    const properties = (selectedTool.inputSchema?.properties || {}) as Record<string, unknown>;
+    const args = Object.fromEntries(Object.keys(properties).map((key) => [key, key === "query" ? "documentation" : "1"]));
+    const response = await fetch("/api/tools/test", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ connectorId, toolName: selectedTool.name, arguments: args }) });
+    const payload = await response.json() as { status?: number; durationMs?: number; error?: string };
+    setTestResult(response.ok ? `HTTP ${payload.status} · ${payload.durationMs} ms` : payload.error || "Test failed.");
   }
 
   return (
@@ -128,7 +159,8 @@ export default function Home() {
               </div>
               <label className="source-label">{mode === "website" ? "WEBSITE URL" : "OPENAPI SPEC URL"}</label>
               <div className="source-input"><span>{mode === "website" ? "◎" : "{}"}</span><input value={source} onChange={(e) => setSource(e.target.value)} aria-label="Source URL"/><button onClick={analyze} disabled={running || !source}>{running ? "Analyzing…" : "Analyze source"}</button></div>
-              <div className="trust-row"><span>✓ Robots.txt aware</span><span>✓ Read-only by default</span><span>✓ Secrets stay encrypted</span></div>
+              <div className="trust-row"><span>✓ Robots.txt aware</span><span>✓ Read-only by default</span><span>✓ No browser-side secrets</span></div>
+              {error && <p className="analysis-error" role="alert">{error}</p>}
             </div>
 
             <div className="flow-panel panel">
@@ -160,6 +192,8 @@ export default function Home() {
                   <p>{selectedTool.description}</p>
                   <dl><div><dt>Endpoint</dt><dd><code>{selectedTool.method} {selectedTool.path}</code></dd></div><div><dt>Authentication</dt><dd>Workspace credential</dd></div><div><dt>Confirmation</dt><dd>{selectedTool.risk === "Write" ? "Required" : "Not required"}</dd></div></dl>
                   <div className="export-row"><span>Export targets</span><div><b>MCP</b><b>OpenAI</b><b>JSON Schema</b><b>TypeScript</b></div></div>
+                  {connectorId && <div className="runtime-actions"><button onClick={testTool} disabled={selectedTool.risk === "Write"}>Test read tool</button><a href={`/api/connectors/${connectorId}/mcp`}>Download MCP server</a></div>}
+                  {testResult && <p className="test-result">{testResult}</p>}
                 </div>
               </div>
             ) : (
