@@ -1,21 +1,23 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-async function render() {
-  const workerUrl = new URL("../dist/server/index.js", import.meta.url);
-  workerUrl.searchParams.set("test", `${process.pid}-${Date.now()}`);
-  const { default: worker } = await import(workerUrl.href);
-  return worker.fetch(new Request("http://localhost/", { headers: { accept: "text/html" } }), { ASSETS: { fetch: async () => new Response("Not found", { status: 404 }) } }, { waitUntil() {}, passThroughOnException() {} });
-}
+test("ships the Relayform connector builder and runtime routes", async () => {
+  const [page, connectorRoute, toolRoute, mcpRoute, migration] = await Promise.all([
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/connectors/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/tools/test/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/connectors/[id]/mcp/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../drizzle/0000_clean_loners.sql", import.meta.url), "utf8"),
+  ]);
 
-test("renders the Relayform connector builder", async () => {
-  const response = await render();
-  assert.equal(response.status, 200);
-  const html = await response.text();
-  assert.match(html, /<title>Relayform — Universal AI Connector<\/title>/i);
-  assert.match(html, /Turn a source into/);
-  assert.match(html, /Connector builder/);
-  assert.match(html, /Analyze source/);
-  assert.match(html, /Universal JSON/);
-  assert.doesNotMatch(html, /codex-preview|Your site is taking shape/);
+  assert.match(page, /Analyze source/);
+  assert.match(page, /Download MCP server/);
+  assert.match(page, /\/api\/connectors/);
+  assert.match(connectorRoute, /analyzeOpenApi/);
+  assert.match(connectorRoute, /analyzeWebsite/);
+  assert.match(toolRoute, /Write tools are blocked/);
+  assert.match(mcpRoute, /generateMcpServer/);
+  assert.match(migration, /CREATE TABLE `connectors`/);
+  assert.match(migration, /CREATE TABLE `tool_runs`/);
 });

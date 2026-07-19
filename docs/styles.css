@@ -1,11 +1,10 @@
-@import "tailwindcss";
-
 :root { --ink:#18211d; --muted:#6e7772; --line:#dfe4df; --paper:#f4f5f1; --panel:#fbfcf9; --green:#1d6a4a; --green-dark:#145039; --mint:#dceee4; --orange:#e56f38; }
 * { box-sizing:border-box; }
 html, body { margin:0; min-height:100%; background:var(--paper); color:var(--ink); }
 body { font-family:Arial, Helvetica, sans-serif; }
 button, input { font:inherit; }
 button { color:inherit; }
+.hidden{display:none!important}.page-link{text-decoration:none}.demo-banner{display:flex;gap:14px;align-items:center;background:#e7f0ea;border:1px solid #cadfd1;color:#456153;border-radius:8px;padding:10px 14px;margin-bottom:26px;font-size:10px}.demo-banner strong{color:var(--green);white-space:nowrap}.sidebar a.nav-item{text-decoration:none}.download-button{background:var(--green)!important;color:#fff!important;border-color:var(--green)!important}
 .app-shell { min-height:100vh; display:flex; }
 .sidebar { position:fixed; inset:0 auto 0 0; width:244px; background:#18211d; color:#f6f6ef; padding:28px 18px 18px; display:flex; flex-direction:column; z-index:10; }
 .brand { display:flex; align-items:center; gap:11px; padding:0 9px 30px; font-size:20px; font-weight:750; letter-spacing:-.5px; }

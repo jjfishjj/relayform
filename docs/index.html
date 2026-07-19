@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Relayform interactive Universal AI Connector demo">
+  <meta property="og:title" content="Relayform — Universal AI Connector">
+  <meta property="og:description" content="Turn websites and APIs into secure, portable AI tools.">
+  <meta property="og:image" content="https://jjfishjj.github.io/relayform/og.png">
+  <title>Relayform — Interactive Demo</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+<main class="app-shell">
+  <aside class="sidebar">
+    <div class="brand"><span class="brand-mark">✦</span><span>Relayform</span></div>
+    <nav class="nav-list" aria-label="Main navigation">
+      <button class="nav-item active"><span>▦</span>Workbench</button>
+      <button class="nav-item"><span>⌁</span>Connectors <b>1</b></button>
+      <button class="nav-item"><span>⌘</span>Tool registry <b id="tool-count-nav">3</b></button>
+      <button class="nav-item"><span>↗</span>Observability</button>
+      <button class="nav-item"><span>◇</span>Security</button>
+    </nav>
+    <div class="sidebar-bottom">
+      <a class="nav-item" href="https://github.com/jjfishjj/relayform" target="_blank" rel="noreferrer"><span>≡</span>GitHub source</a>
+      <div class="workspace-card"><span class="avatar">JK</span><div><strong>GrowthOS Lab</strong><small>GitHub Pages demo</small></div><span class="chevron">⌄</span></div>
+    </div>
+  </aside>
+  <section class="workspace">
+    <header class="topbar">
+      <div><span class="eyebrow">INTERACTIVE DEMO</span><h1>Connector builder</h1></div>
+      <div class="top-actions"><span class="status-dot">●</span><span class="system-status">Static showcase online</span><a class="primary small page-link" href="https://github.com/jjfishjj/relayform" target="_blank" rel="noreferrer">View GitHub</a></div>
+    </header>
+    <div class="content">
+      <div class="demo-banner"><strong>Interactive showcase</strong><span>This GitHub Pages version simulates analysis in your browser. The repository contains the real crawler, OpenAPI parser, D1 storage, and MCP generator.</span></div>
+      <section class="hero"><div><p class="kicker">CONNECT ANYTHING → ANY AI</p><h2>Turn a source into<br><em>AI-ready tools.</em></h2></div><p class="hero-copy">Analyze a website or API, review detected capabilities, then export a secure connector for MCP and other agent runtimes.</p></section>
+      <section class="builder-grid">
+        <div class="source-panel panel">
+          <div class="panel-heading"><span class="step">01</span><div><h3>Choose a source</h3><p>Try the interactive Website or OpenAPI demonstration.</p></div></div>
+          <div class="mode-tabs" role="tablist"><button id="website-tab" class="selected">Website</button><button id="openapi-tab">OpenAPI</button></div>
+          <label class="source-label" id="source-label" for="source-url">WEBSITE URL</label>
+          <div class="source-input"><span id="source-icon">◎</span><input id="source-url" value="https://example.com" aria-label="Source URL"><button id="analyze-button">Analyze source</button></div>
+          <div class="trust-row"><span>✓ Robots.txt aware</span><span>✓ Read-only by default</span><span>✓ No browser-side secrets</span></div>
+        </div>
+        <div class="flow-panel panel">
+          <div class="panel-heading compact"><span class="step">02</span><div><h3>Capability pipeline</h3><p>Your source is normalized before export.</p></div></div>
+          <div class="pipeline">
+            <div class="pipe-step complete"><span>01</span><div><strong>Source</strong><small id="source-type">Website crawler</small></div><b>✓</b></div><div class="pipe-line"></div>
+            <div class="pipe-step complete" id="parse-step"><span>02</span><div><strong>Parse</strong><small>Structure + semantics</small></div><b>✓</b></div><div class="pipe-line"></div>
+            <div class="pipe-step complete" id="normalize-step"><span>03</span><div><strong>Normalize</strong><small>Universal definition</small></div><b>✓</b></div><div class="pipe-line"></div>
+            <div class="pipe-step ready" id="export-step"><span>04</span><div><strong>Export</strong><small>MCP + JSON Schema</small></div><b>Ready</b></div>
+          </div>
+        </div>
+      </section>
+      <section class="results panel">
+        <div class="results-header"><div class="panel-heading compact"><span class="step">03</span><div><h3>Review detected tools</h3><p><span id="tool-count">3</span> capabilities found on <strong id="source-host">example.com</strong></p></div></div><div class="view-tabs"><button id="preview-tab" class="selected">Tool preview</button><button id="json-tab">Universal JSON</button></div></div>
+        <div class="tool-layout" id="preview-view"><div class="tool-list" id="tool-list"></div><div class="tool-detail"><div class="detail-title"><div><span class="badge">TOOL</span><h4 id="detail-name"></h4></div><span class="risk read" id="detail-risk"></span></div><p id="detail-description"></p><dl><div><dt>Endpoint</dt><dd><code id="detail-endpoint"></code></dd></div><div><dt>Authentication</dt><dd>Workspace credential</dd></div><div><dt>Confirmation</dt><dd id="detail-confirmation"></dd></div></dl><div class="export-row"><span>Export targets</span><div><b>MCP</b><b>OpenAI</b><b>JSON Schema</b><b>TypeScript</b></div></div><div class="runtime-actions"><button id="test-button">Test read tool</button><button class="download-button" id="download-button">Download demo MCP</button></div><p class="test-result hidden" id="test-result"></p></div></div>
+        <div class="json-view hidden" id="json-view"><button id="copy-button">Copy JSON</button><pre id="json-output"></pre></div>
+      </section>
+      <footer><span>Relayform · Universal AI Connector</span><span>Static GitHub Pages showcase</span></footer>
+    </div>
+  </section>
+</main>
+<script src="./app.js"></script>
+</body>
+</html>
