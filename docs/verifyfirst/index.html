@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="VerifyFirst Guardian — 可撤銷、可追溯的可信反詐代理 Demo">
+  <title>VerifyFirst Guardian</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#" aria-label="VerifyFirst Guardian 首頁">
+      <span class="brand-mark">V</span>
+      <span><b>VerifyFirst</b><small>Guardian</small></span>
+    </a>
+    <div class="session"><span class="pulse"></span> 代表：王小明本人 <span>•</span> Agent VF-01</div>
+    <button id="revokeTop" class="btn danger ghost" disabled>停止並撤銷</button>
+  </header>
+
+  <main class="shell">
+    <section class="hero">
+      <div>
+        <p class="eyebrow">受委任的可信反詐代理</p>
+        <h1>先查證，再行動。</h1>
+        <p>把可疑訊息交給隔離環境分析。Guardian 會整理證據，但絕不登入、輸入 OTP、付款或替你送出資料。</p>
+      </div>
+      <div class="trust-strip" aria-label="安全承諾">
+        <span>✓ 單次委任</span><span>✓ 10 分鐘有效</span><span>✓ 隨時撤銷</span>
+      </div>
+    </section>
+
+    <nav class="steps" aria-label="分析進度">
+      <button class="step active" data-step="1"><i>1</i><span>提交案件<small>可疑內容</small></span></button>
+      <span class="line"></span>
+      <button class="step" data-step="2"><i>2</i><span>確認委任<small>權限邊界</small></span></button>
+      <span class="line"></span>
+      <button class="step" data-step="3"><i>3</i><span>安全查證<small>證據與政策</small></span></button>
+    </nav>
+
+    <section id="inputView" class="view active">
+      <div class="panel input-panel">
+        <div class="panel-heading">
+          <div><p class="kicker">STEP 01</p><h2>收到什麼可疑內容？</h2></div>
+          <button id="seniorToggle" class="mode-btn" aria-pressed="false">長輩模式 <span>關</span></button>
+        </div>
+        <div class="case-tabs" role="tablist" aria-label="案例情境">
+          <button class="case-tab active" data-case="normal">正常查證</button>
+          <button class="case-tab" data-case="attack">攻擊攔截</button>
+          <button class="case-tab" data-case="revoke">撤銷測試</button>
+        </div>
+        <label for="caseInput">貼上網址、簡訊或電話號碼</label>
+        <textarea id="caseInput" rows="7" placeholder="例如：您的包裹配送失敗，請於 24 小時內更新付款資料…">【速達物流】您的包裹配送失敗，請於 24 小時內至 https://delivery-check.example/verify 更新信用卡資料，逾期退回。</textarea>
+        <div id="inputError" class="error" role="alert"></div>
+        <div class="privacy-note"><span>◉</span><p><b>隱私保護已開啟</b><br>電話與帳號會先遮罩；Demo 不會開啟你貼上的網址。</p></div>
+        <button id="prepareBtn" class="btn primary wide">建立安全查證委任 <span>→</span></button>
+      </div>
+      <aside class="panel side-card">
+        <p class="kicker">GUARDRAILS</p><h3>Guardian 不會做的事</h3>
+        <ul><li><span>×</span>登入任何可疑網站</li><li><span>×</span>輸入密碼或 OTP</li><li><span>×</span>付款或連接錢包</li><li><span>×</span>下載或執行檔案</li><li><span>×</span>未確認就傳送資料</li></ul>
+        <p class="fineprint">所有工具呼叫與政策判斷都會留下可驗證紀錄。</p>
+      </aside>
+    </section>
+
+    <section id="mandateView" class="view">
+      <div class="panel mandate-panel">
+        <div class="panel-heading"><div><p class="kicker">STEP 02</p><h2>確認這次的調查委任</h2></div><span class="status-badge">草稿</span></div>
+        <p class="lead">Guardian 只會在以下範圍內代表你查證這一個案件。</p>
+        <div class="mandate-id"><span>MANDATE ID</span><b id="mandateId">VF-2026-0822-A7K2</b><button id="copyId">複製</button></div>
+        <div class="scope-grid">
+          <div><small>代表對象</small><b>王小明（本人）</b></div><div><small>有效期限</small><b>10 分鐘</b></div><div><small>案件範圍</small><b>僅本次可疑訊息</b></div><div><small>檢舉草稿</small><b>允許建立、不送出</b></div>
+        </div>
+        <div class="permission-columns">
+          <div class="allow"><h3>✓ 允許</h3><ul><li>檢查網址與轉址</li><li>查詢 RDAP／DNS</li><li>比對公開風險來源</li><li>建立 165 檢舉草稿</li></ul></div>
+          <div class="deny"><h3>× 禁止</h3><ul><li>登入或輸入 OTP</li><li>付款或連接錢包</li><li>下載 APK／檔案</li><li>對外傳送或正式檢舉</li></ul></div>
+        </div>
+        <label class="consent"><input id="consent" type="checkbox"><span>我了解這是一份單次、短效且可隨時撤銷的委任；高風險動作將被阻擋。</span></label>
+        <div id="consentError" class="error" role="alert"></div>
+        <div class="button-row"><button id="backBtn" class="btn secondary">← 返回修改</button><button id="authorizeBtn" class="btn primary">授權並開始安全查證</button></div>
+      </div>
+    </section>
+
+    <section id="resultView" class="view">
+      <div class="result-head">
+        <div><p class="kicker">STEP 03 · ANALYSIS COMPLETE</p><h2>查證結果</h2></div>
+        <div class="mandate-live"><span class="pulse"></span><span>委任有效中<small id="timer">09:59 後到期</small></span></div>
+      </div>
+      <div class="result-grid">
+        <article class="panel verdict-card">
+          <div class="risk-ring"><strong id="riskScore">92</strong><small>/ 100</small></div>
+          <div><span id="riskBadge" class="risk-badge">高度風險</span><h3 id="verdictTitle">請勿輸入資料或付款</h3><p id="verdictText">此訊息使用限時壓力，引導至仿冒物流頁面並要求信用卡資料。封鎖名單命中已觸發程式層級風險下限。</p></div>
+        </article>
+        <article class="panel actions-card"><h3>現在可以怎麼做</h3><button>撥打 165 反詐騙專線 <span>↗</span></button><button id="draftBtn">產生 165 檢舉草稿 <span>→</span></button><button>從官方網站查詢包裹 <span>↗</span></button></article>
+      </div>
+      <div class="content-tabs"><button class="active" data-pane="evidence">證據分層 <span>4</span></button><button data-pane="timeline">稽核時間軸 <span id="eventCount">6</span></button><button data-pane="gateway">Gateway 驗證</button></div>
+      <div id="evidencePane" class="pane active"></div>
+      <div id="timelinePane" class="pane panel"><div id="timeline" class="timeline"></div></div>
+      <div id="gatewayPane" class="pane panel"><pre id="gatewayTrace"></pre></div>
+      <div id="revokedBanner" class="revoked-banner" hidden><b>委任已撤銷</b><span>後續工具呼叫已立即失效，案件保留唯讀稽核紀錄。</span><button id="retryTool">測試撤銷後呼叫</button></div>
+    </section>
+  </main>
+
+  <dialog id="draftDialog"><button class="dialog-close" aria-label="關閉">×</button><p class="kicker">165 REPORT DRAFT</p><h2>檢舉草稿</h2><p>以下內容已遮罩個資，尚未送出。</p><div id="draftContent" class="draft-content"></div><div class="button-row"><button id="copyDraft" class="btn secondary">複製草稿</button><button class="btn primary" disabled>正式送出（需本人確認）</button></div></dialog>
+  <div id="toast" class="toast" role="status"></div>
+  <script src="app.js"></script>
+</body>
+</html>
