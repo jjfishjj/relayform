@@ -48,6 +48,7 @@
           <p class="pathway-copy">同一套短效委任、最小揭露、可追溯稽核與撤銷規則，套用到不同的 Agent 任務。</p>
           <div class="pathway-tabs" role="tablist" aria-label="Trust Pathways 情境">
             <button class="pathway-tab" data-case="manufacturing"><b>01</b><span>製造貿易<small>碳足跡 × DPP</small></span></button>
+            <button class="pathway-tab" data-case="finance"><b>02</b><span>電支金融<small>反詐 × 交易保護</small></span></button>
             <button class="pathway-tab" data-case="government"><b>04</b><span>政府服務<small>育兒津貼 × Agent</small></span></button>
             <button class="pathway-tab" data-case="migrant"><b>05</b><span>移工數位信任<small>普惠金融 × 防詐</small></span></button>
             <button class="pathway-tab" data-case="rba"><b>06</b><span>RBA 供應鏈<small>公平招募 × 合規</small></span></button>
@@ -97,7 +98,7 @@
       </div>
       <div class="result-grid">
         <article class="panel verdict-card">
-          <div class="risk-ring"><strong id="riskScore">92</strong><small>/ 100</small></div>
+          <div class="risk-ring"><strong id="riskScore">92</strong><small id="riskScoreUnit">/ 100</small></div>
           <div><span id="riskBadge" class="risk-badge">高度風險</span><h3 id="verdictTitle">請勿輸入資料或付款</h3><p id="verdictText">此訊息使用限時壓力，引導至仿冒物流頁面並要求信用卡資料。封鎖名單命中已觸發程式層級風險下限。</p></div>
         </article>
         <article class="panel actions-card"><h3>現在可以怎麼做</h3><button id="actionOne">查看安全政策 <span>↗</span></button><button id="draftBtn">產生案件摘要草稿 <span>→</span></button><button id="actionThree">查看撤銷規則 <span>↗</span></button></article>
@@ -112,6 +113,7 @@
 
   <dialog id="draftDialog"><button class="dialog-close" aria-label="關閉">×</button><p class="kicker">165 REPORT DRAFT</p><h2>檢舉草稿</h2><p>以下內容已遮罩個資，尚未送出。</p><div id="draftContent" class="draft-content"></div><div class="button-row"><button id="copyDraft" class="btn secondary">複製草稿</button><button class="btn primary" disabled>正式送出（需本人確認）</button></div></dialog>
   <div id="toast" class="toast" role="status"></div>
+  <script src="../shared/safe-dom.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

@@ -25,6 +25,7 @@ const guardianCases = {
 const pathways = {
   manufacturing: {
     number: '01', short: '製造貿易', subtitle: '碳足跡 × DPP', tag: 'PAIN POINT 01 · MANUFACTURING',
+    sourceLabel: '來源：痛點 1｜製造貿易', sourceNote: '合成案例：碳足跡與 DPP 的跨組織查驗',
     input: '製造貿易案件：品牌商查驗產品碳足跡，但供應商不揭露配方、能耗與完整供應商名單。',
     score: 88, badge: '信任缺口', title: '碳排證明可供查驗',
     text: '查驗方只取得碳排值與有效簽章；底層製程資料維持私密。',
@@ -42,8 +43,29 @@ const pathways = {
       ['unverified', 'Withheld · 保留未揭露', '製程資料維持私密', '配方與供應商名單不在 mandate scope。']
     ]
   },
+  finance: {
+    number: '02', short: '電支金融', subtitle: '反詐 × 交易保護', tag: 'PAIN POINT 02 · E-PAYMENT FINANCE',
+    sourceLabel: '來源：痛點 2｜電支金融', sourceNote: '合成案例：社交工程、加密貨幣投資與付款風險的六階段鏈',
+    input: '電支金融案件：陌生人以高報酬投資邀請建立信任，要求註冊平台、轉帳入金並連接加密錢包。',
+    score: 'HIGH', badge: '高風險攔截', title: '投資邀請與付款操作已被攔截',
+    text: '訊息同時出現陌生關係、高報酬保證、急迫加碼與付款／錢包操作；Agent 只提供防詐提醒，不執行資金移轉。',
+    representative: '本人 → 電支防詐 Agent',
+    purpose: '判斷投資邀請是否包含社交工程與資金移轉風險',
+    disclosure: '只揭露風險類型與阻擋原因，不揭露完整個人或交易資料',
+    scope: '單一投資邀請／付款請求', output: '產生防詐提醒、不執行付款',
+    allow: ['擷取訊息中的風險訊號', '查詢合成風險來源', '產生防詐提醒與求證清單'],
+    deny: ['登入或輸入 OTP', '付款、轉帳或連接錢包', '依高報酬承諾加碼入金', '繳交保證金、稅金或手續費解鎖'],
+    decision: 'DENY_HIGH_RISK_ACTION', reasonCodes: ['SOCIAL_ENGINEERING_PATTERN', 'PAYMENT_OR_WALLET_PROHIBITED', 'HIGH_RETURN_PRESSURE'],
+    evidence: [
+      ['observed', 'Observed · 直接觀察', '高報酬與急迫話術', '訊息要求限時投資並承諾高額回報。'],
+      ['corroborated', 'Corroborated · 外部佐證', '付款路徑出現', '流程包含入金、加密貨幣兌換與轉入指定平台。'],
+      ['inference', 'Model Inference · 模型推論', '疑似六階段詐騙鏈', '建立關係、假象獲利、加碼與追加費用形成連續風險。'],
+      ['unverified', 'Withheld · 保留未揭露', '未執行任何資金操作', '系統不登入、不輸入 OTP、不付款、不連接錢包。']
+    ]
+  },
   government: {
     number: '04', short: '政府服務', subtitle: '育兒津貼 × Agent 代辦', tag: 'PAIN POINT 04 · PUBLIC SERVICE',
+    sourceLabel: '來源：痛點 4｜政府服務', sourceNote: '合成案例：跨機關資格比對與本人授權的 Agent 代辦',
     input: '政府服務案件：比對滿 2 歲轉換資格並準備育兒補助申請草稿，正式送件仍由本人確認。',
     score: 82, badge: '信任缺口', title: '資格符合，草稿已備妥',
     text: 'Agent 可代查與代填；正式送件具有法律效果，必須由本人再次確認。',
@@ -63,6 +85,7 @@ const pathways = {
   },
   migrant: {
     number: '05', short: '移工數位信任', subtitle: '普惠金融 × 防詐', tag: 'PAIN POINT 05 · MIGRANT TRUST',
+    sourceLabel: '來源：痛點 5｜移工數位信任', sourceNote: '合成案例：Person／Device／Credential 1:1:1 限定用途綁定',
     input: '移工數位信任案件：建立本人、裝置與限定用途憑證的可信綁定，避免保存完整證件影像。',
     score: 91, badge: '信任缺口', title: '1:1:1 信任綁定完成',
     text: 'Person、Device、Credential 已建立限定用途綁定；憑證可到期與撤銷。',
@@ -82,6 +105,7 @@ const pathways = {
   },
   rba: {
     number: '06', short: 'RBA 供應鏈', subtitle: '公平招募 × 持續合規', tag: 'PAIN POINT 06 · RBA COMPLIANCE',
+    sourceLabel: '來源：痛點 6｜RBA 供應鏈合規', sourceNote: '合成案例：零招募費聲明、持續驗證與例外人工複核',
     input: 'RBA 供應鏈案件：驗證 36 名移工的零招募費聲明，例外案件交由人工複核。',
     score: 94, badge: '信任缺口', title: '35 筆通過，1 筆需人工複核',
     text: 'Agent 可證明大部分流程符合公平招募；爭議費用不自動放行，已建立人工複核任務。',
@@ -109,6 +133,8 @@ let revoked = false;
 
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
+const safeDom = globalThis.VerifyFirstSafeDom;
+if (!safeDom) throw new Error('VerifyFirst safe DOM helper is required');
 
 function activeCase() {
   return selectedKind === 'pathway' ? pathways[selected] : guardianCases[selected];
@@ -157,17 +183,20 @@ function renderInput() {
   label.textContent = isPathway ? '案件摘要（合成資料）' : '貼上網址、簡訊或電話號碼';
   input.placeholder = isPathway ? '此為合成案例；可直接修改後建立委任。' : '例如：您的包裹配送失敗，請於 24 小時內更新付款資料…';
   input.value = item.input;
-  privacy.innerHTML = isPathway
-    ? '<b>合成資料模式已開啟</b><br>Trust Pathways 不連接政府、金融、企業或移工的真實資料。'
-    : '<b>隱私保護已開啟</b><br>電話與帳號會先遮罩；Demo 不會開啟你貼上的網址。';
-  prepare.innerHTML = `${isPathway ? '建立信任案件委任' : '建立安全查證委任'} <span>→</span>`;
+  safeDom.replaceChildren(
+    privacy,
+    safeDom.create('b', { text: isPathway ? '合成資料模式已開啟' : '隱私保護已開啟' }),
+    safeDom.create('br'),
+    safeDom.create('span', { text: isPathway ? 'Trust Pathways 不連接政府、金融、企業或移工的真實資料。' : '電話與帳號會先遮罩；Demo 不會開啟你貼上的網址。' })
+  );
+  prepare.replaceChildren(document.createTextNode(`${isPathway ? '建立信任案件委任' : '建立安全查證委任'} `), safeDom.create('span', { text: '→' }));
   $('#inputError').textContent = '';
   $('#consent').checked = false;
 }
 
 function prepareMandate() {
   const item = activeCase();
-  const suffix = Math.random().toString(36).slice(2, 6).toUpperCase();
+  const suffix = safeDom.randomToken(8);
   const id = selectedKind === 'pathway' ? `VF-${item.number}-20260824-${suffix}` : `VF-2026-0822-${suffix}`;
   $('#mandateId').textContent = id;
   $('#mandateLead').textContent = selectedKind === 'pathway'
@@ -177,15 +206,22 @@ function prepareMandate() {
   $('#mandateExpiry').textContent = selectedKind === 'pathway' ? '10 分鐘／單一案件' : '10 分鐘';
   $('#mandateScope').textContent = item.scope || '僅本次可疑訊息';
   $('#mandateOutput').textContent = item.output || '允許建立、不送出';
-  $('#allowList').innerHTML = (item.allow || ['檢查網址與轉址', '查詢 RDAP／DNS', '比對公開風險來源', '建立安全查證草稿']).map((text) => `<li>${text}</li>`).join('');
-  $('#denyList').innerHTML = (item.deny || ['登入或輸入 OTP', '付款或連接錢包', '下載 APK／檔案', '對外傳送或正式申報']).map((text) => `<li>${text}</li>`).join('');
+  safeDom.replaceChildren($('#allowList'), ...safeDom.listItems(item.allow || ['檢查網址與轉址', '查詢 RDAP／DNS', '比對公開風險來源', '建立安全查證草稿']));
+  safeDom.replaceChildren($('#denyList'), ...safeDom.listItems(item.deny || ['登入或輸入 OTP', '付款或連接錢包', '下載 APK／檔案', '對外傳送或正式申報']));
   $('#consent').checked = false;
   $('#consentError').textContent = '';
 }
 
 function evidenceCard(lane, title, detail, source, id) {
   const evidenceId = id || (source === '頁面要求敏感操作' ? 'e01' : source === '風險來源交叉命中' ? 'e02' : source === '急迫與假冒話術' ? 'e03' : 'e04');
-  return `<article class="evidence-card"><span class="lane ${lane}">${title}</span><h4>${source}</h4><p>${detail}</p><span class="source">${selectedKind === 'pathway' ? 'synthetic-pathway' : 'sandbox-observer'} · evidence #${evidenceId}</span></article>`;
+  const article = safeDom.create('article', { className: 'evidence-card' });
+  article.append(
+    safeDom.create('span', { className: `lane ${lane}`, text: title }),
+    safeDom.create('h4', { text: source }),
+    safeDom.create('p', { text: detail }),
+    safeDom.create('span', { className: 'source', text: `${selectedKind === 'pathway' ? 'synthetic-pathway' : 'sandbox-observer'} · evidence #${evidenceId}` })
+  );
+  return article;
 }
 
 function renderResult() {
@@ -193,6 +229,7 @@ function renderResult() {
   revoked = false;
   seconds = 599;
   $('#riskScore').textContent = item.score;
+  $('#riskScoreUnit').textContent = typeof item.score === 'number' ? '/ 100' : 'signal';
   $('#riskBadge').textContent = item.badge;
   $('#verdictTitle').textContent = selectedKind === 'pathway' ? item.title : item.title;
   $('#verdictText').textContent = item.text;
@@ -202,11 +239,13 @@ function renderResult() {
   $('#actionThree').textContent = '查看撤銷規則 ↗';
 
   if (selectedKind === 'pathway') {
-    $('#evidencePane').innerHTML = item.evidence.map((evidence, index) => evidenceCard(evidence[0], evidence[1], evidence[3], evidence[2], `e0${index + 1}`)).join('');
-    $('#timeline').innerHTML = event('10:00:01', 'Mandate verified', '身份、scope、expiry 與 nonce 驗證完成')
-      + event('10:00:02', 'Policy gate evaluated', item.decision)
-      + event('10:00:03', 'Minimal disclosure applied', item.disclosure)
-      + event('10:00:04', 'Audit event sealed', 'event_hash 與 prev_hash 已建立');
+    safeDom.replaceChildren($('#evidencePane'), ...item.evidence.map((evidence, index) => evidenceCard(evidence[0], evidence[1], evidence[3], evidence[2], `e0${index + 1}`)));
+    safeDom.replaceChildren($('#timeline'),
+      event('10:00:01', 'Mandate verified', '身份、scope、expiry 與 nonce 驗證完成'),
+      event('10:00:02', 'Policy gate evaluated', item.decision),
+      event('10:00:03', 'Minimal disclosure applied', item.disclosure),
+      event('10:00:04', 'Audit event sealed', 'event_hash 與 prev_hash 已建立')
+    );
     $('#eventCount').textContent = '4';
     $('#gatewayTrace').textContent = JSON.stringify({
       decision: item.decision,
@@ -220,23 +259,25 @@ function renderResult() {
       reason_codes: item.reasonCodes,
       evidence_hash: 'sha256:synthetic…demo'
     }, null, 2);
-    $('#draftContent').textContent = `案件：${$('#mandateId').textContent}\n場景：${item.short} · ${item.subtitle}\n代表對象：${item.representative}\n目的：${item.purpose}\n資料揭露：${item.disclosure}\n決策：${item.decision}\n\n※ 此為合成資料 Demo 草稿，尚未送出。`;
+    $('#draftContent').textContent = `案件：${$('#mandateId').textContent}\n場景：${item.short} · ${item.subtitle}\n來源：${item.sourceLabel}\n情境說明：${item.sourceNote}\n代表對象：${item.representative}\n目的：${item.purpose}\n資料揭露：${item.disclosure}\n決策：${item.decision}\n\n※ 此為合成資料 Demo 草稿，尚未送出。`;
   } else {
     const attackEvent = selected === 'attack'
       ? event('10:02:07', '敏感操作請求', '登入 + OTP 被政策阻擋', 'deny')
       : event('10:02:07', '頁面行為觀察', '偵測付款與 OTP 欄位', 'deny');
-    $('#evidencePane').innerHTML = [
+    safeDom.replaceChildren($('#evidencePane'),
       evidenceCard('observed', 'Observed · 直接觀察', selected === 'attack' ? '要求 Agent 登入並輸入一次性驗證碼。' : '要求輸入付款資料，並以期限製造壓力。', '頁面要求敏感操作', 'e01'),
       evidenceCard('corroborated', 'Corroborated · 外部佐證', '合成 Safe Browsing 與社群回報資料皆標示此網域具釣魚風險。', '風險來源交叉命中', 'e02'),
       evidenceCard('inference', 'Model Inference · 模型推論', '內容結合權威身份、時間壓力與高報酬承諾，符合常見社交工程模式。', '急迫與假冒話術', 'e03'),
       evidenceCard('unverified', 'Unverified · 尚未驗證', '目前沒有公開資料足以證明此網站與其宣稱的物流／投資機構有關。', '宣稱的組織關係', 'e04')
-    ].join('');
-    $('#timeline').innerHTML = event('10:02:01', '委任已簽發', 'scope、期限與 nonce 驗證完成')
-      + event('10:02:02', 'PII 遮罩', '電話與識別碼於分析前遮罩')
-      + event('10:02:03', 'Sandbox Observer', '隔離環境取得頁面摘要')
-      + attackEvent
-      + event('10:02:09', '公開來源查詢', '合成風險資料交叉比對')
-      + event('10:02:11', '風險結論建立', '4 種 Trust Lane 已完成');
+    );
+    safeDom.replaceChildren($('#timeline'),
+      event('10:02:01', '委任已簽發', 'scope、期限與 nonce 驗證完成'),
+      event('10:02:02', 'PII 遮罩', '電話與識別碼於分析前遮罩'),
+      event('10:02:03', 'Sandbox Observer', '隔離環境取得頁面摘要'),
+      attackEvent,
+      event('10:02:09', '公開來源查詢', '合成風險資料交叉比對'),
+      event('10:02:11', '風險結論建立', '4 種 Trust Lane 已完成')
+    );
     $('#eventCount').textContent = '6';
     $('#gatewayTrace').textContent = JSON.stringify({
       decision: selected === 'attack' ? 'DENY' : 'ALLOW',
@@ -255,7 +296,13 @@ function renderResult() {
 }
 
 function event(time, title, detail, type = 'allow') {
-  return `<div class="event ${type}"><time>${time}</time><span class="event-dot"></span><div><b>${title}<span class="decision">${type === 'deny' ? 'DENY' : 'ALLOW'}</span></b><p>${detail}</p></div></div>`;
+  const row = safeDom.create('div', { className: `event ${type}` });
+  const body = safeDom.create('div');
+  const titleRow = safeDom.create('b', { text: title });
+  titleRow.append(safeDom.create('span', { className: 'decision', text: type === 'deny' ? 'DENY' : 'ALLOW' }));
+  body.append(titleRow, safeDom.create('p', { text: detail }));
+  row.append(safeDom.create('time', { text: time }), safeDom.create('span', { className: 'event-dot' }), body);
+  return row;
 }
 
 function tick() {
@@ -309,15 +356,18 @@ function revoke(reason = '使用者主動撤銷') {
   revoked = true;
   clearInterval(timerHandle);
   $('#revokeTop').disabled = true;
-  $('.mandate-live').innerHTML = '<span style="color:#b83a31">●</span><span>委任已撤銷<small>所有工具權限失效</small></span>';
+  const revokedIndicator = safeDom.create('span', { className: 'revoke-dot', text: '●' });
+  const revokedLabel = safeDom.create('span', { text: '委任已撤銷' });
+  revokedLabel.append(safeDom.create('small', { text: '所有工具權限失效' }));
+  safeDom.replaceChildren($('.mandate-live'), revokedIndicator, revokedLabel);
   $('#revokedBanner').hidden = false;
-  $('#timeline').insertAdjacentHTML('beforeend', event('10:02:18', 'Stop & Revoke', `${reason}；撤銷狀態已同步至 Gateway`, 'deny'));
+  $('#timeline').append(event('10:02:18', 'Stop & Revoke', `${reason}；撤銷狀態已同步至 Gateway`, 'deny'));
   $('#eventCount').textContent = String(Number($('#eventCount').textContent) + 1);
   toast('委任已撤銷，後續呼叫將被拒絕');
 }
 $('#revokeTop').onclick = () => revoke();
 $('#retryTool').onclick = () => {
-  $('#timeline').insertAdjacentHTML('beforeend', event('10:02:20', '撤銷後工具呼叫', 'DENY · MANDATE_REVOKED', 'deny'));
+  $('#timeline').append(event('10:02:20', '撤銷後工具呼叫', 'DENY · MANDATE_REVOKED', 'deny'));
   $('#eventCount').textContent = String(Number($('#eventCount').textContent) + 1);
   $('#gatewayTrace').textContent = JSON.stringify({
     decision: 'DENY',
