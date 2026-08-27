@@ -43,12 +43,23 @@
           <div><p class="kicker">STEP 01</p><h2>收到什麼可疑內容？</h2></div>
           <button id="seniorToggle" class="mode-btn" aria-pressed="false">長輩模式 <span>關</span></button>
         </div>
+        <section class="pathway-selector" aria-labelledby="pathwayTitle">
+          <div class="pathway-heading"><div><p class="kicker">TRUST PATHWAYS</p><h3 id="pathwayTitle">跨組織信任情境</h3></div><span class="synthetic-badge">合成資料 Demo</span></div>
+          <p class="pathway-copy">同一套短效委任、最小揭露、可追溯稽核與撤銷規則，套用到不同的 Agent 任務。</p>
+          <div class="pathway-tabs" role="tablist" aria-label="Trust Pathways 情境">
+            <button class="pathway-tab" data-case="manufacturing"><b>01</b><span>製造貿易<small>碳足跡 × DPP</small></span></button>
+            <button class="pathway-tab" data-case="government"><b>04</b><span>政府服務<small>育兒津貼 × Agent</small></span></button>
+            <button class="pathway-tab" data-case="migrant"><b>05</b><span>移工數位信任<small>普惠金融 × 防詐</small></span></button>
+            <button class="pathway-tab" data-case="rba"><b>06</b><span>RBA 供應鏈<small>公平招募 × 合規</small></span></button>
+          </div>
+        </section>
+        <p class="case-group-label">GUARDIAN CASES · 可疑內容查證</p>
         <div class="case-tabs" role="tablist" aria-label="案例情境">
           <button class="case-tab active" data-case="normal">正常查證</button>
           <button class="case-tab" data-case="attack">攻擊攔截</button>
           <button class="case-tab" data-case="revoke">撤銷測試</button>
         </div>
-        <label for="caseInput">貼上網址、簡訊或電話號碼</label>
+        <label id="caseInputLabel" for="caseInput">貼上網址、簡訊或電話號碼</label>
         <textarea id="caseInput" rows="7" placeholder="例如：您的包裹配送失敗，請於 24 小時內更新付款資料…">【速達物流】您的包裹配送失敗，請於 24 小時內至 https://delivery-check.example/verify 更新信用卡資料，逾期退回。</textarea>
         <div id="inputError" class="error" role="alert"></div>
         <div class="privacy-note"><span>◉</span><p><b>隱私保護已開啟</b><br>電話與帳號會先遮罩；Demo 不會開啟你貼上的網址。</p></div>
@@ -64,14 +75,14 @@
     <section id="mandateView" class="view">
       <div class="panel mandate-panel">
         <div class="panel-heading"><div><p class="kicker">STEP 02</p><h2>確認這次的調查委任</h2></div><span class="status-badge">草稿</span></div>
-        <p class="lead">Guardian 只會在以下範圍內代表你查證這一個案件。</p>
+        <p id="mandateLead" class="lead">Guardian 只會在以下範圍內代表你查證這一個案件。</p>
         <div class="mandate-id"><span>MANDATE ID</span><b id="mandateId">VF-2026-0822-A7K2</b><button id="copyId">複製</button></div>
         <div class="scope-grid">
-          <div><small>代表對象</small><b>王小明（本人）</b></div><div><small>有效期限</small><b>10 分鐘</b></div><div><small>案件範圍</small><b>僅本次可疑訊息</b></div><div><small>檢舉草稿</small><b>允許建立、不送出</b></div>
+          <div><small>代表對象</small><b id="mandateRepresentative">王小明（本人）</b></div><div><small>有效期限</small><b id="mandateExpiry">10 分鐘</b></div><div><small>案件範圍</small><b id="mandateScope">僅本次可疑訊息</b></div><div><small>輸出範圍</small><b id="mandateOutput">允許建立、不送出</b></div>
         </div>
         <div class="permission-columns">
-          <div class="allow"><h3>✓ 允許</h3><ul><li>檢查網址與轉址</li><li>查詢 RDAP／DNS</li><li>比對公開風險來源</li><li>建立 165 檢舉草稿</li></ul></div>
-          <div class="deny"><h3>× 禁止</h3><ul><li>登入或輸入 OTP</li><li>付款或連接錢包</li><li>下載 APK／檔案</li><li>對外傳送或正式檢舉</li></ul></div>
+          <div class="allow"><h3>✓ 允許</h3><ul id="allowList"><li>檢查網址與轉址</li><li>查詢 RDAP／DNS</li><li>比對公開風險來源</li><li>建立安全查證草稿</li></ul></div>
+          <div class="deny"><h3>× 禁止</h3><ul id="denyList"><li>登入或輸入 OTP</li><li>付款或連接錢包</li><li>下載 APK／檔案</li><li>對外傳送或正式申報</li></ul></div>
         </div>
         <label class="consent"><input id="consent" type="checkbox"><span>我了解這是一份單次、短效且可隨時撤銷的委任；高風險動作將被阻擋。</span></label>
         <div id="consentError" class="error" role="alert"></div>
@@ -81,7 +92,7 @@
 
     <section id="resultView" class="view">
       <div class="result-head">
-        <div><p class="kicker">STEP 03 · ANALYSIS COMPLETE</p><h2>查證結果</h2></div>
+        <div><p id="resultKicker" class="kicker">STEP 03 · ANALYSIS COMPLETE</p><h2>查證結果</h2></div>
         <div class="mandate-live"><span class="pulse"></span><span>委任有效中<small id="timer">09:59 後到期</small></span></div>
       </div>
       <div class="result-grid">
@@ -89,7 +100,7 @@
           <div class="risk-ring"><strong id="riskScore">92</strong><small>/ 100</small></div>
           <div><span id="riskBadge" class="risk-badge">高度風險</span><h3 id="verdictTitle">請勿輸入資料或付款</h3><p id="verdictText">此訊息使用限時壓力，引導至仿冒物流頁面並要求信用卡資料。封鎖名單命中已觸發程式層級風險下限。</p></div>
         </article>
-        <article class="panel actions-card"><h3>現在可以怎麼做</h3><button>撥打 165 反詐騙專線 <span>↗</span></button><button id="draftBtn">產生 165 檢舉草稿 <span>→</span></button><button>從官方網站查詢包裹 <span>↗</span></button></article>
+        <article class="panel actions-card"><h3>現在可以怎麼做</h3><button id="actionOne">查看安全政策 <span>↗</span></button><button id="draftBtn">產生案件摘要草稿 <span>→</span></button><button id="actionThree">查看撤銷規則 <span>↗</span></button></article>
       </div>
       <div class="content-tabs"><button class="active" data-pane="evidence">證據分層 <span>4</span></button><button data-pane="timeline">稽核時間軸 <span id="eventCount">6</span></button><button data-pane="gateway">Gateway 驗證</button></div>
       <div id="evidencePane" class="pane active"></div>
