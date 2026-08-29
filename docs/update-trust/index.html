@@ -1,0 +1,554 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#091310">
+  <meta name="description" content="VerifyFirst Update Trust：用 GLEIF 官方 keripy regression fixture 走完 vLEI 信任鏈，瀏覽器重算 SAID、驗 KEL 簽章、走 ACDC 邊鏈，再把短效 Agent 委任憑證掛上去，觀察撤銷、過期與上游失效如何立即改變決策。">
+  <title>Update Trust · vLEI Agent Delegation Lifecycle | VerifyFirst</title>
+  <style>
+    :root{--bg:#091310;--panel:#101e19;--panel2:#142720;--line:#274036;--text:#f2f7f4;--muted:#9eb2aa;--mint:#8ee3bd;--mint2:#d9ff8b;--red:#ff786a;--amber:#ffc66b;--blue:#76b6ff;--violet:#c7a2ff;--shadow:0 26px 70px #0007}
+    *{box-sizing:border-box}html{scroll-behavior:smooth}
+    body{margin:0;background:radial-gradient(circle at 15% 0,#163328 0,transparent 36%),var(--bg);color:var(--text);font-family:Inter,"Noto Sans TC","PingFang TC",system-ui,sans-serif;min-height:100vh}
+    a{color:var(--mint)}
+    .top{height:70px;padding:0 max(20px,calc((100vw - 1200px)/2));display:flex;align-items:center;gap:20px;border-bottom:1px solid var(--line);background:#091310e8;backdrop-filter:blur(18px);position:sticky;top:0;z-index:10}
+    .brand{display:flex;gap:11px;align-items:center;color:var(--text);text-decoration:none}.mark{width:36px;height:36px;border-radius:11px;display:grid;place-items:center;background:var(--mint);color:#07120e;font-weight:1000}.brand b{display:block}.brand small{display:block;color:var(--muted);font-size:10px;letter-spacing:.14em}
+    .top-note{margin:auto;color:var(--muted);font-size:12px}.top a.nav,.top button{border:1px solid var(--line);background:transparent;color:var(--muted);padding:9px 12px;border-radius:9px;font-size:12px;text-decoration:none;cursor:pointer}
+    .shell{width:min(1200px,calc(100% - 32px));margin:auto;padding:54px 0 90px}
+    .eyebrow{color:var(--mint);font-size:11px;font-weight:900;letter-spacing:.18em;text-transform:uppercase;margin:0 0 12px}
+    .hero{display:grid;grid-template-columns:1.4fr .9fr;align-items:end;gap:42px;margin-bottom:30px}
+    .hero h1{font-family:Georgia,"Noto Serif TC",serif;font-size:clamp(40px,5.6vw,68px);line-height:1.04;letter-spacing:-.045em;margin:0}.hero h1 em{font-style:normal;color:var(--mint)}
+    .hero-copy{color:var(--muted);font-size:15px;line-height:1.8;margin:0}
+    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+    .tour{display:grid;grid-template-columns:1fr auto;align-items:center;gap:20px;padding:18px 20px;margin:0 0 18px;border:1px solid #3f6d59;border-radius:16px;background:linear-gradient(110deg,#183126,#101e19);box-shadow:0 18px 50px #0004}
+    .tour-kicker{margin:0 0 6px;color:var(--mint);font:850 10px/1 monospace;letter-spacing:.12em}.tour strong{display:block;font:700 17px/1.4 Georgia,"Noto Serif TC",serif}.tour p{margin:5px 0 0;color:var(--muted);font-size:12px;line-height:1.55}
+    .tour-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}.tour-chips b{padding:6px 8px;border:1px solid #355647;border-radius:7px;background:#102019;color:#c5d5ce;font-size:10px;font-weight:750}
+    .play{display:grid;gap:4px;place-items:center;min-width:210px;border:0;border-radius:11px;padding:13px 17px;background:var(--mint2);color:#10180d;font-weight:950;cursor:pointer}.play small{font-size:9px;font-weight:750;opacity:.65}
+    .tour-console{display:none;grid-template-columns:86px 1fr auto;align-items:center;gap:18px;padding:15px 20px;margin:0 0 12px;border:1px solid #4d846c;border-radius:16px;background:#0b1713;position:sticky;top:78px;z-index:9;box-shadow:var(--shadow)}.tour-console.active{display:grid}
+    .tour-clock{font:900 25px/1 monospace;color:var(--mint2)}.tour-copy small{display:block;color:var(--mint);font:800 10px/1.2 monospace;letter-spacing:.08em}.tour-copy b{display:block;margin:5px 0 3px;font-size:14px}.tour-copy p{margin:0;color:var(--muted);font-size:12px;line-height:1.5}
+    .tour-actions{display:flex;gap:7px}.tour-actions button{border:1px solid var(--line);border-radius:8px;padding:9px 10px;background:#16251f;color:var(--text);font-weight:750;cursor:pointer}.tour-actions .exit{color:#ffaaa1}
+    .points{display:grid;grid-template-columns:repeat(6,1fr);border:1px solid var(--line);border-radius:16px;overflow:hidden;margin-bottom:24px;background:#0b1713}
+    .points div{padding:14px 14px;border-right:1px solid var(--line);font-size:11px;color:var(--muted);line-height:1.5}.points div:last-child{border:0}.points b{display:block;color:var(--text);margin-bottom:4px;font-size:12px}.points small{display:block;margin-top:6px;font:800 8px monospace;letter-spacing:.08em}
+    .points .official{color:var(--mint)}.points .proposed{color:var(--amber)}
+    .workspace{display:grid;grid-template-columns:360px 1fr;gap:20px;align-items:start}
+    .panel{border:1px solid var(--line);border-radius:18px;background:linear-gradient(145deg,#112019,#0d1a16);box-shadow:var(--shadow)}
+    .chain-panel{padding:18px;position:sticky;top:90px}
+    .chain-panel h2{font-size:13px;margin:4px 0 6px;color:var(--muted)}
+    .root-switch{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:10px 0 14px}.root-switch button{border:1px solid #355647;border-radius:8px;padding:8px;background:#0c1914;color:var(--muted);font:750 9px/1.3 monospace;cursor:pointer;text-align:left}.root-switch button.active{border-color:var(--mint);background:#183126;color:var(--mint)}.root-switch button.prod.active{border-color:var(--amber);background:#312817;color:var(--amber)}
+    .chain{display:grid;gap:6px}
+    .node{position:relative;padding:11px 12px;border:1px solid #2b473a;border-radius:11px;background:#0c1914;transition:.25s}
+    .node:not(:last-child):after{content:'↓';position:absolute;left:50%;bottom:-13px;transform:translateX(-50%);z-index:1;width:16px;height:16px;display:grid;place-items:center;border-radius:50%;background:#254537;color:var(--mint);font-size:10px;font-weight:900}
+    .node small{display:block;color:#6f8a7e;font:800 8px monospace;letter-spacing:.06em}.node b{display:block;margin:5px 0 3px;font-size:12px}.node .said{color:var(--muted);font:9px/1.5 monospace;word-break:break-all}.node .meta{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}.node .meta span{padding:3px 5px;border-radius:5px;background:#132219;color:#8ea39a;font:750 7.5px monospace}
+    .node.valid{border-color:var(--mint);background:#14291f}.node.valid small{color:var(--mint)}.node.invalid{border-color:#7a3d36;background:#2c1d1a}.node.invalid small{color:var(--red)}.node.proposed{border-style:dashed}.node.root{background:#0e1a15}
+    .pill{display:inline-block;padding:3px 6px;border-radius:5px;font:850 8px monospace}.pill.ok{background:#173b2c;color:var(--mint)}.pill.bad{background:#3c201c;color:#ff9d93}.pill.warn{background:#342b1b;color:var(--amber)}.pill.info{background:#1b2a3a;color:var(--blue)}.pill.violet{background:#2a2140;color:var(--violet)}
+    .main-panel{overflow:hidden}
+    .step{padding:22px 26px;border-bottom:1px solid var(--line)}.step:last-child{border-bottom:0}
+    .step-head{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:12px}.step-head small{display:block;color:var(--mint);font:850 9px/1 monospace;letter-spacing:.1em}.step-head h3{margin:7px 0 5px;font:700 19px/1.3 Georgia,"Noto Serif TC",serif}.step-head p{margin:0;color:var(--muted);font-size:11.5px;line-height:1.65;max-width:640px}
+    .btn{border:0;border-radius:9px;padding:10px 13px;background:var(--mint);color:#07120e;font-size:11px;font-weight:900;cursor:pointer;white-space:nowrap}.btn:disabled{opacity:.55;cursor:wait}.btn.secondary{background:#20352d;color:var(--text)}.btn.danger{background:#331d1a;color:#ff9b91;border:1px solid #63312b}.btn.warn{background:#2f2718;color:var(--amber);border:1px solid #6b5630}.btn.ghost{background:transparent;border:1px solid var(--line);color:var(--muted)}
+    .stats{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:10px 0}.stat{padding:11px;border:1px solid var(--line);border-radius:10px;background:#0b1713}.stat small{display:block;color:var(--muted);font-size:9px;margin-bottom:5px}.stat b{font-size:16px;font-family:monospace}
+    .source{display:flex;align-items:flex-start;gap:7px;margin:8px 0 0;color:var(--muted);font:750 8.5px/1.5 monospace}.source i{width:6px;height:6px;margin-top:3px;flex:none;border-radius:50%;background:var(--amber)}.source.ok i{background:var(--mint)}.source.error i{background:var(--red)}
+    .checks{display:grid;gap:6px;margin-top:10px}.check{display:grid;grid-template-columns:20px 1fr auto;gap:10px;align-items:start;padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:#0b1713}
+    .check i{width:18px;height:18px;border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:900;background:#1c2b24;color:#6f8a7e}.check.ok i{background:#173b2c;color:var(--mint)}.check.bad i{background:#3c201c;color:#ff9d93}
+    .check b{display:block;font-size:11px}.check p{margin:3px 0 0;color:var(--muted);font:9px/1.5 monospace;word-break:break-word}.check .lvl{padding:3px 6px;border-radius:5px;font:850 7.5px monospace;background:#132219;color:var(--mint)}.check .lvl.policy{background:#2b2d20;color:var(--amber)}.check .lvl.backend{background:#1b2a3a;color:var(--blue)}
+    .legend{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}.legend span{padding:5px 7px;border:1px solid #355647;border-radius:6px;color:#94a9a0;font:750 7.5px monospace}.legend b{color:var(--mint)}.legend .p b{color:var(--amber)}.legend .k b{color:var(--blue)}
+    .agent-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.card{padding:13px;border:1px solid var(--line);border-radius:11px;background:#0b1713;min-width:0}.card small{display:block;color:#789087;font:800 8px/1 monospace;letter-spacing:.08em}.card h4{margin:7px 0 6px;font-size:13px}.card p{margin:0 0 8px;color:var(--muted);font-size:10px;line-height:1.55}
+    .form{display:grid;gap:7px;margin:8px 0}.form label{display:grid;gap:4px;color:var(--muted);font-size:9.5px}.form input,.form textarea{width:100%;border:1px solid #395448;border-radius:8px;padding:8px 9px;background:#07110d;color:var(--text);font:10px/1.4 monospace}.form textarea{min-height:44px;resize:vertical}.form .row{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+    pre.payload{max-height:230px;overflow:auto;margin:8px 0 0;padding:10px;border-radius:8px;background:#07110d;color:#b7c8c0;font:9px/1.55 monospace;white-space:pre-wrap;word-break:break-all}
+    .decision{display:flex;gap:16px;align-items:center;padding:18px;background:#182921;border:1px solid #365344;border-radius:13px;margin:10px 0 14px}.decision.deny{border-color:#72423b;background:#2c1d1a}.decision.idle{opacity:.7}
+    .decision-icon{width:52px;height:52px;flex:none;border-radius:50%;display:grid;place-items:center;background:#24483a;color:var(--mint);font-size:22px}.decision.deny .decision-icon{background:#55261f;color:#ffaca3}
+    .decision small{color:var(--mint);font:800 10px monospace}.decision.deny small{color:var(--red)}.decision h3{margin:4px 0;font-size:17px}.decision p{margin:0;color:var(--muted);font-size:11.5px;line-height:1.55}
+    .lifecycle{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-top:10px}.lifecycle button{text-align:left;padding:10px 11px;border-radius:9px;font-size:10.5px;font-weight:850;cursor:pointer}.lifecycle button small{display:block;margin-top:3px;font:700 8px/1.35 monospace;opacity:.75}
+    .events{margin-top:12px}.event{display:grid;grid-template-columns:70px 14px 1fr;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}.event time{font:10px monospace;color:var(--muted)}.dot{width:9px;height:9px;border-radius:50%;background:var(--mint);margin-top:3px}.event.deny .dot{background:var(--red)}.event.sim .dot{background:var(--amber)}.event b{font-size:12px}.event b .code{margin-left:8px;color:var(--mint);font:800 9px monospace}.event.deny b .code{color:var(--red)}.event.sim b .code{color:var(--amber)}.event p{margin:3px 0 0;color:var(--muted);font:9.5px/1.5 monospace;word-break:break-all}
+    .packet{display:grid;grid-template-columns:1fr auto;align-items:center;gap:14px;margin-top:14px;padding:14px;border:1px solid #3f6956;border-radius:12px;background:#10231b}.packet small{display:block;color:var(--mint);font:850 9px monospace;letter-spacing:.08em}.packet b{display:block;margin:5px 0;font-size:13px}.packet p{margin:0;color:var(--muted);font:9px/1.6 monospace;word-break:break-all}
+    .backend{margin-top:12px;padding:12px;border:1px solid #315547;border-radius:10px;background:#0a1712}.backend-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}.backend-head b{font-size:10px}.backend-flow{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin:8px 0}.backend-flow span{padding:6px;border-radius:6px;background:#15231d;color:#6f857b;font:750 7.5px/1.35 monospace;text-align:center}.backend-flow span.ok{background:#173426;color:var(--mint)}.backend-flow span.invalid{background:#3a211d;color:#ff9d93}.backend-detail{margin:7px 0 0;color:#80958c;font:8.5px/1.5 monospace;word-break:break-word}
+    .memo{margin-top:26px;padding:26px 30px;border:1px solid #456f5c;border-radius:18px;background:linear-gradient(135deg,#142a21,#0b1713)}
+    .memo h2{margin:8px 0 6px;font:700 26px/1.2 Georgia,"Noto Serif TC",serif}.memo>p{color:var(--muted);font-size:12.5px;line-height:1.7;max-width:820px;margin:0 0 18px}
+    .memo-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.memo-grid article{padding:15px;border:1px solid var(--line);border-radius:12px;background:#0b1713}.memo-grid small{display:block;color:var(--mint);font:850 8.5px monospace;letter-spacing:.08em}.memo-grid article.gap small{color:var(--red)}.memo-grid article.proposal small{color:var(--amber)}.memo-grid article.policy small{color:var(--blue)}.memo-grid h3{margin:7px 0 8px;font-size:14px}.memo-grid ul{margin:0;padding-left:16px;color:var(--muted);font-size:11px;line-height:1.75}.memo-grid li b{color:#dbe8e2}
+    .sources{display:flex;flex-wrap:wrap;gap:6px;margin-top:16px}.sources a{color:var(--mint);font-size:9.5px;text-decoration:none;border-bottom:1px solid #8ee3bd55;padding-bottom:1px}
+    .disclaimer{margin:12px 0 0;color:#789087;font:8.5px/1.6 monospace}
+    .toast{position:fixed;bottom:25px;left:50%;transform:translate(-50%,20px);opacity:0;background:#f0f8f4;color:#0a1712;padding:11px 16px;border-radius:9px;font-weight:800;font-size:12px;transition:.25s;pointer-events:none;z-index:20}.toast.show{opacity:1;transform:translate(-50%,0)}
+    @media(max-width:980px){.points{grid-template-columns:repeat(3,1fr)}.points div:nth-child(3){border-right:0}.points div:nth-child(-n+3){border-bottom:1px solid var(--line)}.workspace{grid-template-columns:1fr}.chain-panel{position:static}.stats{grid-template-columns:repeat(3,1fr)}.lifecycle{grid-template-columns:1fr 1fr}.memo-grid{grid-template-columns:1fr}}
+    @media(max-width:640px){.hero{grid-template-columns:1fr;gap:18px}.tour{grid-template-columns:1fr}.play{width:100%}.tour-console{grid-template-columns:72px 1fr}.tour-actions{grid-column:1/-1}.tour-actions button{flex:1}.points{grid-template-columns:1fr}.points div{border-right:0;border-bottom:1px solid var(--line)}.agent-grid,.form .row,.stats,.lifecycle{grid-template-columns:1fr}.step{padding:18px}.packet{grid-template-columns:1fr}.top-note{display:none}.event{grid-template-columns:56px 12px 1fr}.decision{display:block}.decision-icon{margin-bottom:10px}}
+  </style>
+</head>
+<body>
+  <header class="top">
+    <a class="brand" href="/relayform/"><span class="mark">V</span><span><b>VerifyFirst</b><small>UPDATE TRUST</small></span></a>
+    <span class="top-note">GLEIF 官方測試 fixture + 明確標示的模擬 · 不連接正式系統</span>
+    <a class="nav" href="/relayform/trust-pathways/">← Trust Pathways</a>
+    <button id="resetAll">重置</button>
+  </header>
+  <main class="shell">
+    <section class="hero">
+      <div><p class="eyebrow">TRUSTWORTHY AI · vLEI LIFECYCLE · AGENT DELEGATION</p><h1>信任會過期，<br><em>每次行動前重新驗證。</em></h1></div>
+      <p class="hero-copy">用 GLEIF 官方 <span class="mono">vlei-verifier</span> 的 regression fixture 走完 GLEIF → QVI → Legal Entity → ECR 的真實信任鏈：瀏覽器重算每個 SAID、驗 KEL 簽章、走 ACDC 邊鏈；再把一張短效的 Agent 委任憑證掛上去，看撤銷、過期與上游失效如何立刻把決策翻成 DENY。</p>
+    </section>
+
+    <section class="tour">
+      <div><p class="tour-kicker">GUIDED LIFECYCLE TOUR · 01:00</p><strong>60 秒信任生命週期導覽</strong><p>按一次自動跑完：載入官方鏈 → 瀏覽器驗證 → 建立 Agent AID 與委任 → 只揭露碳排的選擇性出示 → 撤銷上游角色 → 切換 production root，全程 fail closed。</p><div class="tour-chips"><b>1 官方鏈</b><b>2 瀏覽器驗證</b><b>3 Agent 委任</b><b>4 只揭露碳排</b><b>5 撤銷連鎖</b><b>6 Fail closed</b></div></div>
+      <button id="startTour" class="play">▶ 觀看 60 秒生命週期<small>預計 1 分 00 秒</small></button>
+    </section>
+    <section id="tourConsole" class="tour-console" aria-live="polite"><div id="tourClock" class="tour-clock">01:00</div><div class="tour-copy"><small id="tourChapter">READY · 60 SEC</small><b id="tourLine">準備好後按下播放</b><p id="tourAction">畫面會自動操作，旁白可直接照念。</p></div><div class="tour-actions"><button id="nextTour">下一幕</button><button id="exitTour" class="exit">離開</button></div></section>
+
+    <section class="points" aria-label="六個可信要點對應">
+      <div><b>Principal · 代表誰</b>LE vLEI（LEI）＋ ECR/OOR 持有人 AID<small class="official">OFFICIAL · EGF</small></div>
+      <div><b>Authorization · 授權什麼</b>委任憑證 a.purpose／a.scope／expires<small class="proposed">PROPOSED · ACDC</small></div>
+      <div><b>Tool／Action · 行動邊界</b>scope.allow／deny／confirm 進政策閘門<small class="proposed">PROPOSED · POLICY</small></div>
+      <div><b>Policy Gate · 高風險把關</b>verifier fail-closed＋root of trust 政策<small class="official">OFFICIAL · VERIFIER</small></div>
+      <div><b>Audit · 可稽核</b>SAID／KEL／TEL 錨定＋Evidence Packet<small class="official">OFFICIAL · KERI</small></div>
+      <div><b>Revocation · 可撤銷</b>TEL rev 事件；上游撤銷連帶失效<small class="official">OFFICIAL · TEL</small></div>
+    </section>
+
+    <section class="workspace">
+      <aside class="panel chain-panel">
+        <p class="eyebrow">TRUST CHAIN · LIVE STATE</p>
+        <h2>每個節點都是真實 ACDC，狀態隨操作更新</h2>
+        <div class="root-switch" role="group" aria-label="Root of trust">
+          <button id="rootFixture" class="active" data-root="fixture">ROOT · FIXTURE<br>test GLEIF AID</button>
+          <button id="rootProduction" class="prod" data-root="production">ROOT · PRODUCTION<br>GLEIF External</button>
+        </div>
+        <div id="chain" class="chain"><div class="node root"><small>00 · ROOT OF TRUST</small><b>尚未載入</b><span class="said">按「載入官方 fixture」開始</span></div></div>
+        <p class="disclaimer">fixture 由 GLEIF-IT/vlei-verifier 測試套件產生：root 為測試 AID，LEI 雖存在於 Global LEI Index，但憑證非真實 QVI 簽發。Agent 委任憑證為本專案提案，非 GLEIF 官方憑證類型。</p>
+      </aside>
+
+      <article class="panel main-panel">
+        <section class="step" id="stepFixture">
+          <div class="step-head"><div><small>01 · OFFICIAL FIXTURE · PINNED COMMIT 5850051</small><h3>載入 GLEIF 官方 regression CESR 串流</h3><p>同一份 <span class="mono">tests/data/credential/credential.cesr</span> 也是 Trust Pathways 送進 live keripy verifier 的檔案。本地副本與 GitHub raw 逐位元比對 SHA-256，兩者皆顯示。</p></div><button id="loadFixture" class="btn">載入官方 fixture</button></div>
+          <div class="stats"><div class="stat"><small>CESR messages</small><b id="statMessages">–</b></div><div class="stat"><small>KEL events (icp/ixn)</small><b id="statKel">–</b></div><div class="stat"><small>TEL events (vcp/iss)</small><b id="statTel">–</b></div><div class="stat"><small>ACDC credentials</small><b id="statAcdc">–</b></div><div class="stat"><small>Controller AIDs</small><b id="statAids">–</b></div></div>
+          <div id="fixtureLocal" class="source"><i></i><span>LOCAL COPY · 尚未載入</span></div>
+          <div id="fixtureRemote" class="source"><i></i><span>GITHUB RAW · 尚未比對</span></div>
+        </section>
+
+        <section class="step" id="stepVerify">
+          <div class="step-head"><div><small>02 · BROWSER VERIFICATION · BLAKE3 + ED25519 + ACDC EDGES</small><h3>瀏覽器自己算，不相信任何綠燈</h3><p>重算每則訊息的 SAID（CESR 代碼 E＝Blake3-256）、以 icp 公鑰驗 KEL 事件的 Ed25519 簽章、檢查 ACDC 邊鏈 I2I 規則、schema SAID 對應 GLEIF-IT/vLEI-schema、TEL iss／vcp 事件是否以 seal 錨定於簽發者 KEL（未錨定即拒絕；瀏覽器內模擬的委任 registry 例外並明確標示）。</p></div><button id="verifyBrowser" class="btn" disabled>執行瀏覽器驗證</button></div>
+          <div id="checkList" class="checks"><div class="check"><i>·</i><div><b>等待 fixture</b><p>載入後才會執行任何驗證；沒有結果就沒有 ALLOW。</p></div><span class="lvl">BROWSER</span></div></div>
+          <div class="legend"><span><b>BROWSER</b> · 本頁 JavaScript 完成</span><span class="p"><b>POLICY</b> · 驗證方政策（root、schema allowlist）</span><span class="k"><b>BACKEND</b> · keripy verifier：witness receipts、即時 key state、duplicity</span></div>
+        </section>
+
+        <section class="step" id="stepAgent">
+          <div class="step-head"><div><small>03 · AGENT AID + DELEGATION · PROPOSED EXTENSION</small><h3>讓 ECR 持有人委任一個 Agent，而不是把私鑰交給它</h3><p>Agent 用 WebCrypto 產生 Ed25519 金鑰，並以 KERI inception event 自我認證出 AID。ECR 持有人（fixture 中的 <span class="mono" id="holderShort">…</span>）簽發一張短效、單一目的的委任 ACDC，邊 <span class="mono">role → ECR</span> 使用 I2I：委任的簽發者必須是 ECR 的 issuee。</p></div><div style="display:grid;gap:6px"><button id="createAgent" class="btn secondary" disabled>1 建立 Agent AID</button><button id="issueDelegation" class="btn" disabled>2 簽發委任憑證</button></div></div>
+          <div class="agent-grid">
+            <div class="card"><small>AGENT · KERI INCEPTION (BROWSER)</small><h4 id="agentTitle">尚未建立</h4><p id="agentText">將產生 icp 事件：kt=1、nt=1（pre-rotation 承諾下一把鑰匙）、bt=0（無 witness）。</p><pre id="agentPayload" class="payload">等待建立…</pre></div>
+            <div class="card"><small>DELEGATION ACDC · PROPOSED SCHEMA</small><h4>委任內容（可修改後再簽發）</h4>
+              <div class="form">
+                <label>purpose<input id="fPurpose" value="彙整訂單 VF-2048 的產品碳足跡證明並準備 CBAM 申報草稿"></label>
+                <div class="row"><label>scope.allow（逗號分隔）<textarea id="fAllow">verify:vlei-chain, read:product-id, read:carbon-footprint-vc, draft:cbam-declaration</textarea></label><label>scope.deny<textarea id="fDeny">read:process-recipe, read:energy-profile, share:supplier-list, submit:declaration</textarea></label></div>
+                <div class="row"><label>scope.confirm（需本人確認）<input id="fConfirm" value="submit:declaration"></label><label>ttlMinutes<input id="fTtl" type="number" min="1" max="1440" value="10"></label></div>
+              </div>
+              <pre id="delegationPayload" class="payload">等待簽發…</pre>
+            </div>
+          </div>
+        </section>
+
+        <section class="step" id="stepCarbon">
+          <div class="step-head"><div><small>04 · SELECTIVE DISCLOSURE · ACDC MOST-COMPACT SAID · PAIN POINT 01</small><h3>只揭露碳排那一項，不交出製程機密</h3><p>供應商以 Legal Entity vLEI 簽發產品碳足跡 VC（提案 schema，邊 <span class="mono">le → LE vLEI</span> 用 I2I）。屬性區塊 product／carbon／process／audit 各自有 SAID；出示時把不揭露的區塊換成 SAID，品牌商或海關仍能重算整張憑證的 SAID、沿邊鏈回到 GLEIF，卻看不到配方、能耗與供應商名單。</p></div><div style="display:grid;gap:6px"><button id="issueCarbon" class="btn secondary" disabled>1 供應商簽發碳足跡 VC</button><button id="presentCarbon" class="btn" disabled>2 出示給品牌商／海關</button></div></div>
+          <div class="agent-grid">
+            <div class="card"><small>HOLDER · SUPPLIER (LE) · FULL CREDENTIAL</small><h4 id="carbonTitle">尚未簽發</h4><p>選擇要揭露的區塊；若已簽發 Agent 委任，出示會先經過委任的 scope 政策閘門（process 需要 <span class="mono">read:process-recipe</span>，預設在 deny 清單）。</p>
+              <div id="discloseBoxes" class="form" style="grid-template-columns:repeat(4,1fr);display:grid;gap:6px"><label><input type="checkbox" data-block="product" checked> product</label><label><input type="checkbox" data-block="carbon" checked> carbon</label><label><input type="checkbox" data-block="process"> process</label><label><input type="checkbox" data-block="audit"> audit</label></div>
+              <pre id="carbonPayload" class="payload">等待簽發…</pre></div>
+            <div class="card"><small>VERIFIER · BRAND／CUSTOMS · WHAT IT RECEIVES</small><h4 id="carbonVerdict">尚未出示</h4><p id="carbonSummary">驗證方只會收到出示的區塊與其餘區塊的 SAID；下方列出它實際能看到的內容與重算結果。</p><div id="carbonChecks" class="checks"></div><pre id="carbonPresented" class="payload">等待出示…</pre></div>
+          </div>
+          <div class="lifecycle" style="grid-template-columns:repeat(3,1fr)"><button id="tamperCarbon" class="btn warn" disabled>竄改碳排值<small>改 12.4 → 2.4，不重算 SAID</small></button><button id="presentFull" class="btn ghost" disabled>由 Agent 出示 process<small>測試 scope 政策閘門</small></button><button id="resetCarbon" class="btn ghost" disabled>重設碳足跡 VC</button></div>
+        </section>
+
+        <section class="step" id="stepLifecycle">
+          <div class="step-head"><div><small>05 · UPDATE TRUST · REQUEST → REVOKE → EXPIRE → TAMPER</small><h3>信任是狀態，不是一次性的通過</h3><p>每次 Agent 請求工具，都重新走一遍整條鏈：委任本身、上游 ECR、LE、QVI 的 TEL 狀態、SAID、簽章與 root。任何一層改變，決策立刻改變，且 <span class="mono">tool_execution=false</span> 是機器可讀的。</p></div><button id="requestTool" class="btn" disabled>Agent 請求工具</button></div>
+          <div id="decision" class="decision idle"><span class="decision-icon">·</span><div><small id="decisionCode">PENDING</small><h3 id="decisionTitle">尚未有請求</h3><p id="decisionText">簽發委任後按「Agent 請求工具」。沒有驗證結果就不會有 ALLOW。</p></div></div>
+          <div id="decisionChecks" class="checks"></div>
+          <div class="lifecycle">
+            <button id="revokeDelegation" class="btn danger" disabled>撤銷委任<small>TEL rev · 由 ECR 持有人</small></button>
+            <button id="revokeEcr" class="btn danger" disabled>撤銷上游 ECR<small>TEL rev · 由 QVI（模擬）</small></button>
+            <button id="revokeLe" class="btn danger" disabled>撤銷 LE vLEI<small>TEL rev · 由 QVI（模擬）</small></button>
+            <button id="expireMandate" class="btn warn" disabled>時間快轉到期<small>now += ttl + 1 min</small></button>
+            <button id="tamperScope" class="btn warn" disabled>竄改 scope<small>改內容但不重算 SAID</small></button>
+            <button id="rotateAgent" class="btn secondary" disabled>Agent 金鑰輪替<small>KERI rot · pre-rotation</small></button>
+            <button id="reissue" class="btn secondary" disabled>重新簽發委任<small>新 SAID、新 TTL</small></button>
+            <button id="undoSim" class="btn ghost" disabled>清除模擬事件<small>回到 fixture 原狀</small></button>
+          </div>
+        </section>
+
+        <section class="step" id="stepAudit">
+          <div class="step-head"><div><small>06 · EVIDENCE · AUDIT TIMELINE + PACKET</small><h3>每一步都留下可重算的證據</h3><p>時間軸記錄真實與模擬事件的 SAID；Evidence Packet 含 fixture 雜湊、瀏覽器驗證報告、委任 ACDC、模擬 TEL 事件與決策，任何人可用同一份 said.js 重新驗證。</p></div><button id="downloadPacket" class="btn secondary" disabled>下載 Evidence Packet</button></div>
+          <div id="events" class="events"></div>
+          <div class="packet"><div><small id="packetBadge">PACKET · NOT BUILT</small><b>Evidence Packet 摘要</b><p id="packetDigest">尚未產生；建立後顯示 SHA-256。</p></div></div>
+          <div class="backend"><div class="backend-head"><b>LEVEL 3 · LIVE KERIPY VERIFIER（選用）</b><span id="backendState" class="pill warn">NOT CHECKED</span></div><p class="disclaimer" style="margin:0 0 8px">同一份 fixture 送入已部署的 GLEIF-IT/vlei-verifier 容器（production root、revocation check 開啟）。因 fixture 的 root 是測試 AID，production verifier 預期拒絕——那是正確行為，本頁不會用合成 VALID 掩蓋。後端目前以 VERIFIER_MODE=test 運行以便瀏覽器免簽章輪詢（witness 允許清單在此模式下不強制）。cold start 可能長達 90 秒。</p><button id="sendBackend" class="btn ghost" disabled>送入 live verifier</button><div id="backendFlow" class="backend-flow"><span>HEALTH · PENDING</span><span>PRESENTATION · PENDING</span><span>AUTHORIZATION · PENDING</span></div><p id="backendDetail" class="backend-detail">PUT /presentations/{said} → GET /authorizations/{aid}</p></div>
+        </section>
+      </article>
+    </section>
+
+    <section class="memo" id="memo">
+      <p class="eyebrow">GOVERNANCE GAP MEMO · ONE PAGE</p>
+      <h2>EGF 已經定義了什麼、還沒定義什麼、我們補上什麼</h2>
+      <p>依 GLEIF vLEI Ecosystem Governance Framework v4.0（Primary Document v1.2 · 2026-03-25）、GLEIF 官方訓練教材與 2026-08-25 GLEIF 部落格〈Why AI Agents Need Verifiable Organizational Identity〉整理。目標不是宣稱系統可信，而是指出流程中哪個環節有可驗證的設計、哪個環節仍是治理空白。</p>
+      <div class="memo-grid">
+        <article><small>OFFICIAL · EGF 已定義</small><h3>組織與人的信任鏈</h3><ul>
+          <li><b>信任根</b>：GLEIF Root AID 與 GLEIF External Delegated AID（GEDA），多位 GAR 以多簽建立；QVI 取得 QVI Delegated AID 與 QVI vLEI Credential。</li>
+          <li><b>角色</b>：GAR、QAR、DAR（指定 LAR）、LAR（代表法律實體申請與管理 vLEI）。</li>
+          <li><b>憑證類型</b>：QVI、Legal Entity、OOR Authorization、OOR（依 ISO 5009 官方職務）、ECR Authorization、ECR（法律實體自行定義的職務，可由 LE 直接簽發或由 QVI 簽發）。</li>
+          <li><b>技術</b>：KERI AID／KEL、ACDC＋SAID、CESR、JSON 序列化與 Ed25519 簽章、I2I 邊鏈、TEL（vcp／iss／rev）錨定於簽發者 KEL；QVI 須透過 vLEI Reporting API 回報簽發與撤銷。</li>
+          <li><b>撤銷</b>：由原簽發者在 TEL 記錄 rev 事件；LE vLEI 由 QAR 依 LAR 全簽請求或 LEI 失效等原因撤銷。</li>
+        </ul></article>
+        <article class="gap"><small>GAP · EGF 未定義</small><h3>AI Agent 不是 EGF 裡的主體</h3><ul>
+          <li>OOR／ECR 的 issuee 是<b>自然人</b>；EGF 沒有「Agent 作為憑證持有人」的憑證類型與身分驗證程序。</li>
+          <li>沒有<b>委任語意</b>：目的（purpose）、範圍（scope）、期限（TTL）、需本人確認的動作，都不在官方 schema 內。</li>
+          <li>沒有<b>連鎖失效規則</b>的產品級約定：上游 ECR 或 LE 被撤銷時，下游 Agent 授權應如何、多快失效。</li>
+          <li>沒有<b>問責對映</b>：Agent 越權時，責任落在委任的 ECR 持有人、法律實體還是平台，需要治理框架與契約補齊（GLEIF 2026-08-25 部落格亦指出「accountability behind it remains unclear」）。</li>
+        </ul></article>
+        <article class="proposal"><small>PROPOSAL · 本專案補上</small><h3>Agent Delegation ACDC 與碳足跡 VC（提案，非 GLEIF 官方）</h3><ul>
+          <li><b>選擇性揭露</b>：碳足跡 VC 依 ACDC most-compact SAID 規則，product／carbon／process／audit 各自 SAID 化；出示時 process 只剩 SAID，驗證方仍能重算 a.d 與 d。這正是痛點 1「只揭露碳排那一項，不外洩製程機密」的密碼學實作。</li>
+          <li><b>鏈結</b>：邊 <span class="mono">role → ECR/OOR</span> 使用官方 I2I 運算子，簽發者必須是有效角色憑證的 issuee；schema SAID 由本頁 JSON schema 自我定址計算。</li>
+          <li><b>最小授權</b>：a.purpose、a.scope.allow／deny／confirm、a.expires（預設 10 分鐘）、a.disclosure=MINIMUM_NECESSARY。</li>
+          <li><b>可撤銷</b>：委任有自己的 TEL registry；驗證方每次請求都重走整條鏈，任何一層 rev、過期、SAID 不符或 root 不符都回 DENY_* 與 tool_execution=false。</li>
+          <li><b>Agent 身分</b>：Agent 自己的 KERI AID（本頁以 WebCrypto 產生 icp 事件並簽章），未來可用 KERI 委任 AID＋DI2I 運算子，讓「Agent 是持有人的委任者」在協定層可驗。</li>
+        </ul></article>
+        <article class="policy"><small>POLICY · 給政府與產業的建議</small><h3>把「代理」補進台灣的第三段路</h3><ul>
+          <li>MyData 解決取得、數位憑證皮夾解決出示；<b>代理</b>需要可驗證的委任憑證，回答「誰授權、範圍多大、多久失效、出錯誰負責」。</li>
+          <li>驗證方（政府機關、銀行、品牌商）應公布 <b>schema allowlist 與 root of trust 政策</b>，並以 fail-closed 為預設，如同本頁的 production root 切換。</li>
+          <li>把 <b>撤銷時效</b> 寫進規範：下游授權的 TEL 狀態查詢頻率、上游撤銷後的最長容忍時間。</li>
+          <li>與 GLEIF／QVI 合作，將 Agent 委任納入 EGF 的 ECR 擴充或 Trust Assurance 討論，而非各平台自建互不相認的授權格式。</li>
+        </ul></article>
+      </div>
+      <nav class="sources" aria-label="來源">
+        <a href="https://www.gleif.org/en/organizational-identity/introducing-the-verifiable-lei-vlei" target="_blank" rel="noopener">GLEIF · vLEI 官方介紹 ↗</a>
+        <a href="https://www.gleif.org/en/organizational-identity/introducing-the-verifiable-lei-vlei/gleif-ebook-the-vlei-introducing-digital-i-d-for-organizations-everywhere" target="_blank" rel="noopener">GLEIF eBook ↗</a>
+        <a href="https://www.gleif.org/en/organizational-identity/introducing-the-verifiable-lei-vlei/introducing-the-vlei-ecosystem-governance-framework" target="_blank" rel="noopener">vLEI Ecosystem Governance Framework ↗</a>
+        <a href="https://github.com/GLEIF-IT/vlei-trainings/tree/main/markdown" target="_blank" rel="noopener">GLEIF vlei-trainings ↗</a>
+        <a href="https://github.com/GLEIF-IT/vlei-verifier" target="_blank" rel="noopener">GLEIF-IT/vlei-verifier（fixture 來源）↗</a>
+        <a href="https://github.com/GLEIF-IT/vLEI-schema" target="_blank" rel="noopener">GLEIF-IT/vLEI-schema ↗</a>
+        <a href="https://www.gleif.org/en/newsroom/blog/why-ai-agents-need-verifiable-organizational-identity" target="_blank" rel="noopener">GLEIF Blog 2026-08-25 · AI Agents ↗</a>
+        <a href="https://www.gleif.org/en/newsroom/press-releases/iso-standardizes-gleif-s-pioneering-digital-organizational-identity-offering-with-publication-of-vlei-technical-standard" target="_blank" rel="noopener">ISO 17442-3 ↗</a>
+        <a href="/relayform/update-trust/said.js" target="_blank" rel="noopener">said.js（本頁驗證程式碼）↗</a>
+      </nav>
+      <p class="disclaimer">合成示範：所有 Agent、委任與模擬 TEL 事件皆在瀏覽器內產生，未寫入任何真實 KEL／TEL、未連接 GLEIF、QVI 或任何企業內部系統。fixture 中的 LEI 9845004CC7884BN85018 存在於 Global LEI Index，但該憑證由測試 root 簽發，不代表該法律實體真的持有 vLEI。</p>
+    </section>
+  </main>
+  <div id="toast" class="toast" role="status"></div>
+
+  <script type="module">
+    import * as K from '/relayform/update-trust/said.js';
+    const $ = s => document.querySelector(s);
+    const FIXTURE = { local: '/relayform/update-trust/credential.cesr', remote: 'https://raw.githubusercontent.com/GLEIF-IT/vlei-verifier/5850051b52dce24ed59eae486af76e7c73f6012c/tests/data/credential/credential.cesr', commit: '5850051b52dce24ed59eae486af76e7c73f6012c', ecrSaid: 'EAPHGLJL1s6N4w1Hje5po6JPHu47R9-UoJqLweAci2LV', holderAid: 'EBcIURLpxmVwahksgrsGW6_dUw0zBhyEHYFk17eWrZfk' };
+    const BACKEND = { base: 'https://verifyfirst-vlei-verifier.vercel.app', said: FIXTURE.ecrSaid, holderAid: FIXTURE.holderAid };
+    const fast = new URLSearchParams(location.search).has('fast'), timeScale = fast ? .06 : 1;
+    const DECISIONS = {
+      ALLOW_CHAIN_VERIFIED: ['信任鏈完整，允許在 scope 內執行', '委任、ECR、LE、QVI 四層皆 ISSUED；SAID、簽章、邊鏈與 root 全部通過。Agent 仍不得執行 deny／confirm 清單內的動作。'],
+      DENY_CREDENTIAL_REVOKED: ['委任已撤銷，立即停止', '委任憑證的 TEL 出現 rev 事件；即使上游全部有效，Agent 也不再有任何授權。'],
+      DENY_UPSTREAM_ECR_REVOKED: ['上游 ECR 撤銷，委任連帶失效', '委任本身仍是 ISSUED，但簽發它的人已不再是有效的 ECR 持有人；I2I 鏈結因此失效。'],
+      DENY_UPSTREAM_LE_REVOKED: ['Legal Entity vLEI 撤銷，整條鏈失效', 'LE 憑證被 QVI 撤銷（例如 LEI 失效），其下所有角色與委任一併失效。'],
+      DENY_UPSTREAM_QVI_REVOKED: ['QVI 憑證撤銷，整條鏈失效', 'GLEIF 撤銷 QVI 資格後，該 QVI 簽發的一切都不再可信。'],
+      DENY_MANDATE_EXPIRED: ['委任逾期，需重新簽發', '短效委任到期即失效；不存在「一次驗證、永久授權」。'],
+      DENY_SAID_MISMATCH: ['內容遭竄改，SAID 不符', '任何欄位改動都會讓重算的 Blake3 SAID 與宣稱值不同；驗證方不需要信任任何人就能發現。'],
+      DENY_ROOT_MISMATCH: ['信任根不符：測試 root ≠ GLEIF production', '這份 fixture 的 QVI 憑證由測試 AID 簽發；以 production root 政策驗證時必須拒絕——與 live keripy verifier 的判定一致。'],
+      DENY_CHAIN_BROKEN: ['邊鏈斷裂', 'ACDC 邊指向的憑證不存在、schema 不符或違反 I2I 規則。'],
+      DENY_SIGNATURE_INVALID: ['KEL 簽章無效', '控制者簽章與 icp 公鑰不符。'],
+      DENY_NO_CREDENTIAL: ['沒有可驗證的憑證', '串流中沒有任何 ACDC。'],
+      DENY_NO_DELEGATION: ['沒有有效的 Agent 委任', '請求方不是任何委任憑證的 issuee；人的 ECR 憑證不等於 Agent 的授權。'],
+      DENY_SIGNATURE_UNVERIFIABLE: ['此瀏覽器無法驗證 Ed25519 簽章', '不是簽章錯誤，而是 WebCrypto 不支援 Ed25519（需 Chrome 137+／Safari 17+／Firefox 130+）；未驗證即拒絕，交由後端。'],
+      DENY_TEL_NOT_ANCHORED: ['TEL 事件未錨定於簽發者 KEL', 'iss／vcp 沒有出現在簽發者的 interaction event seal 中，不能當作簽發證明。'],
+      DENY_STREAM_CORRUPT: ['CESR 串流有訊息無法解析', '任何一則損毀的 KEL／TEL／ACDC 訊息都會使整條鏈不可信。'],
+      DENY_VERIFICATION_FAILED: ['驗證未通過', '至少一項檢查失敗；預設拒絕。'],
+    };
+    const TAMPER_SCOPE = ['submit:declaration', 'read:process-recipe'];
+    const state = { messages: [], report: null, agent: null, delegation: null, tamperedDelegation: null, carbon: null, carbonTampered: false, registry: null, iss: null, sims: [], tampered: false, clockOffsetMs: 0, root: 'fixture', audit: [], sha: { local: null, remote: null }, lastDecision: null, packet: null, rotations: 0 };
+    let clockSeconds = 0;
+    const toast = m => { const t = $('#toast'); t.textContent = m; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 1800); };
+    const short = s => typeof s === 'string' && s.length > 20 ? `${s.slice(0, 10)}…${s.slice(-6)}` : (s ?? '–');
+    const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const sha256Hex = async bytes => [...new Uint8Array(await crypto.subtle.digest('SHA-256', bytes))].map(b => b.toString(16).padStart(2, '0')).join('');
+    const simulatedNow = () => new Date(Date.now() + state.clockOffsetMs);
+    const stamp = () => { const t = new Date(0); t.setUTCHours(10, 0, clockSeconds++); return t.toISOString().slice(11, 19); };
+    function audit(title, code, detail, kind = '') {
+      state.audit.push({ time: stamp(), title, code, detail, kind });
+      $('#events').insertAdjacentHTML('beforeend', `<div class="event ${esc(kind)}"><time>${esc(state.audit.at(-1).time)}</time><span class="dot"></span><div><b>${esc(title)}<span class="code">${esc(code)}</span></b><p>${esc(detail)}</p></div></div>`);
+      $('#downloadPacket').disabled = false;
+    }
+    const allMessages = () => [...state.messages, ...state.sims];
+    const rootAid = () => K.ROOT_OF_TRUST[state.root].aid;
+    const verifyOptions = () => ({ rootAid: rootAid(), now: simulatedNow(), leafSaid: state.delegation?.d || null, unanchoredOk: new Set(state.delegation ? [state.delegation.d] : []) });
+    const activeMessages = () => allMessages().map(m => (state.tampered && state.tamperedDelegation && m.ked?.d === state.delegation?.d) ? { ...m, ked: state.tamperedDelegation } : m);
+
+    /* ---------------------------------------------------------------- 01 fixture */
+    async function loadFixture() {
+      const button = $('#loadFixture'); button.disabled = true; button.textContent = '載入中…';
+      const local = $('#fixtureLocal'), remote = $('#fixtureRemote');
+      try {
+        const response = await fetch(FIXTURE.local, { cache: 'no-store' });
+        if (!response.ok) throw new Error(`LOCAL_HTTP_${response.status}`);
+        const text = await response.text();
+        state.messages = K.parseCesrStream(text);
+        state.sha.local = await sha256Hex(new TextEncoder().encode(text));
+        const corrupt = state.messages.filter(m => !m.ked).length;
+        const keds = state.messages.filter(m => m.ked).map(m => m.ked);
+        $('#statMessages').textContent = keds.length; $('#statKel').textContent = keds.filter(k => ['icp', 'ixn', 'rot', 'dip'].includes(k.t)).length; $('#statTel').textContent = keds.filter(k => ['vcp', 'iss', 'rev'].includes(k.t)).length; $('#statAcdc').textContent = keds.filter(k => k.v?.startsWith('ACDC')).length; $('#statAids').textContent = new Set(keds.filter(k => k.t === 'icp').map(k => k.i)).size;
+        local.className = corrupt ? 'source error' : 'source ok'; local.querySelector('span').textContent = `LOCAL COPY · ${Math.round(text.length / 1024)} KB · sha256 ${state.sha.local}${corrupt ? ` · ${corrupt} MESSAGE(S) FAILED TO PARSE` : ''}`;
+        $('#holderShort').textContent = short(FIXTURE.holderAid);
+        audit('Official fixture parsed', 'FIXTURE_LOADED', `${keds.length} CESR messages · pinned commit ${FIXTURE.commit.slice(0, 7)} · sha256 ${state.sha.local.slice(0, 16)}…`);
+        renderChain(null); $('#verifyBrowser').disabled = false; $('#sendBackend').disabled = false; button.textContent = '重新載入 fixture';
+        toast('官方 fixture 已解析');
+        remote.className = 'source'; remote.querySelector('span').textContent = 'GITHUB RAW · 正在比對…';
+        try {
+          const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), 8000);
+          const r = await fetch(FIXTURE.remote, { signal: controller.signal, headers: { Accept: 'application/json+cesr' } }); clearTimeout(timer);
+          if (!r.ok) throw new Error(`HTTP_${r.status}`);
+          state.sha.remote = await sha256Hex(new TextEncoder().encode(await r.text()));
+          const same = state.sha.remote === state.sha.local;
+          remote.className = `source ${same ? 'ok' : 'error'}`; remote.querySelector('span').textContent = `GITHUB RAW · ${same ? 'IDENTICAL' : 'MISMATCH'} · sha256 ${state.sha.remote}`;
+          audit('Fixture cross-checked with GitHub raw', same ? 'FIXTURE_IDENTICAL' : 'FIXTURE_MISMATCH', `remote sha256 ${state.sha.remote.slice(0, 16)}…`, same ? '' : 'deny');
+        } catch (error) {
+          remote.className = 'source error'; remote.querySelector('span').textContent = `GITHUB RAW · UNAVAILABLE (${error.name === 'AbortError' ? 'TIMEOUT' : error.message}) · 僅使用本地副本，已明確標示`;
+        }
+      } catch (error) {
+        local.className = 'source error'; local.querySelector('span').textContent = `FAIL CLOSED · ${error.message}`; button.textContent = '重試載入'; toast('fixture 無法載入');
+      } finally { button.disabled = false; }
+    }
+
+    /* ------------------------------------------------------------- 02 verification */
+    function renderChecks(container, checks) {
+      container.innerHTML = checks.map(c => `<div class="check ${c.ok ? 'ok' : 'bad'}"><i>${c.ok ? '✓' : '✗'}</i><div><b>${esc(c.label)}</b><p>${esc(c.detail)}</p></div><span class="lvl ${c.level === 'POLICY' ? 'policy' : c.level === 'BACKEND' ? 'backend' : ''}">${esc(c.level || 'BROWSER')}</span></div>`).join('');
+    }
+    function renderChain(report) {
+      const chain = $('#chain'), rootLabel = K.ROOT_OF_TRUST[state.root];
+      const rootCred = report?.credentials.find(c => !Object.keys(c.edges).length);
+      const rootOk = report ? report.checks.find(c => c.id === 'root')?.ok : null;
+      let html = `<div class="node root ${rootOk === null ? '' : rootOk ? 'valid' : 'invalid'}"><small>00 · ROOT OF TRUST · ${state.root.toUpperCase()}</small><b>${rootLabel.label}</b><span class="said">${rootLabel.aid}</span><div class="meta"><span>${rootOk === null ? 'NOT VERIFIED' : rootOk ? 'ISSUER OF QVI CREDENTIAL' : `QVI ISSUED BY ${short(rootCred?.issuer)}`}</span></div></div>`;
+      const creds = report ? report.credentials : state.messages.map(m => m.ked).filter(k => k?.v?.startsWith('ACDC')).map(k => ({ said: k.d, schemaKey: K.schemaBySaid(k.s)?.key || 'ACDC', schemaTitle: K.schemaBySaid(k.s)?.title || k.s, issuer: k.i, issuee: k.a?.i, lei: k.a?.LEI, edges: {}, checks: [], status: 'NOT VERIFIED', valid: null, chainValid: null }));
+      creds.forEach((c, i) => {
+        const cls = c.valid === null ? '' : c.chainValid ? 'valid' : 'invalid';
+        html += `<div class="node ${cls} ${c.schemaKey === 'AGENT_DELEGATION' ? 'proposed' : ''}"><small>${String(i + 1).padStart(2, '0')} · ${esc(c.schemaKey)}${c.schemaKey === 'AGENT_DELEGATION' ? ' · PROPOSED' : ' · OFFICIAL SCHEMA'}</small><b>${esc(c.schemaTitle.replace(' (VerifyFirst proposal · NOT a GLEIF vLEI schema)', ''))}</b><span class="said">${esc(c.said)}</span><div class="meta"><span>issuer ${esc(short(c.issuer))}</span><span>issuee ${esc(short(c.issuee))}</span>${c.lei ? `<span>LEI ${esc(c.lei)}</span>` : ''}<span class="pill ${c.status === 'ISSUED' ? 'ok' : c.status === 'REVOKED' ? 'bad' : 'warn'}">${c.status}</span>${c.valid === null ? '' : `<span class="pill ${c.chainValid ? 'ok' : 'bad'}">${c.chainValid ? 'CHAIN OK' : 'CHAIN BROKEN'}</span>`}</div></div>`;
+      });
+      chain.innerHTML = html;
+    }
+    async function runVerification(silent = false) {
+      const button = $('#verifyBrowser'); if (!state.messages.length) return null;
+      button.disabled = true; button.textContent = '計算中…';
+      const started = performance.now();
+      const report = await K.verifyChain(activeMessages(), { ...verifyOptions(), leafSaid: null });
+      state.report = report;
+      renderChecks($('#checkList'), report.checks);
+      renderChain(report);
+      const ms = Math.round(performance.now() - started);
+      button.disabled = false; button.textContent = '重新執行瀏覽器驗證';
+      if (!silent) { audit('Browser verification completed', report.checks.every(c => c.ok) ? 'BROWSER_CHECKS_PASS' : 'BROWSER_CHECKS_FAIL', `${report.checks.filter(c => c.ok).length}/${report.checks.length} checks · ${report.credentials.length} credentials · ${ms} ms`, report.checks.every(c => c.ok) ? '' : 'deny'); toast(`瀏覽器驗證完成 · ${ms} ms`); }
+      $('#createAgent').disabled = false; $('#issueCarbon').disabled = false;
+      return report;
+    }
+
+    /* ---------------------------------------------------------------- 03 agent */
+    async function createAgent() {
+      const button = $('#createAgent'); button.disabled = true;
+      try {
+        if (!globalThis.crypto?.subtle) throw new Error('WEBCRYPTO_UNAVAILABLE');
+        const current = await crypto.subtle.generateKey({ name: 'Ed25519' }, true, ['sign', 'verify']);
+        const next = await crypto.subtle.generateKey({ name: 'Ed25519' }, true, ['sign', 'verify']);
+        const pub = new Uint8Array(await crypto.subtle.exportKey('raw', current.publicKey)), nextPub = new Uint8Array(await crypto.subtle.exportKey('raw', next.publicKey));
+        const icp = K.buildInception(K.cesrEncode('D', pub), K.cesrEncode('D', nextPub));
+        const raw = K.saidify(icp, ['d', 'i']).raw;
+        const sig = new Uint8Array(await crypto.subtle.sign({ name: 'Ed25519' }, current.privateKey, raw));
+        const message = K.asMessage(icp, [K.encodeIndexedSig(sig, 0)]);
+        state.agent = { aid: icp.i, current, next, icp, message };
+        state.sims = [message]; clearDelegation('Agent AID re-created; previous delegation (issued to the old AID) discarded');
+        $('#agentTitle').textContent = `Agent AID ${short(icp.i)}`; $('#agentText').textContent = 'AID = icp 事件的 SAID（d = i）；簽章可在 Step 02 以 Ed25519 重驗。私鑰只存在此瀏覽器工作階段。';
+        $('#agentPayload').textContent = JSON.stringify({ ...icp, controller_signature: message.sigs[0] }, null, 2);
+        audit('Agent AID incepted in browser', 'AGENT_AID_CREATED', `icp ${icp.d} · k[0] ${short(icp.k[0])} · next-key digest ${short(icp.n[0])}`);
+        $('#issueDelegation').disabled = false; $('#rotateAgent').disabled = false; button.textContent = '重新建立 Agent AID';
+        toast('Agent AID 已建立（KERI icp）');
+      } catch (error) {
+        $('#agentTitle').textContent = 'FAIL CLOSED'; $('#agentText').textContent = `${error.message} · 此瀏覽器無法產生 Ed25519 金鑰；請改用 Chrome 137+／Safari 17+／Firefox 130+。`; toast('無法建立 Agent 金鑰');
+      } finally { button.disabled = false; }
+    }
+    function readScope() { const split = v => v.split(',').map(s => s.trim()).filter(Boolean); return { allow: split($('#fAllow').value), deny: split($('#fDeny').value), confirm: split($('#fConfirm').value) }; }
+    function issueDelegation() {
+      if (!state.agent) return;
+      const ecr = state.messages.map(m => m.ked).find(k => k?.d === FIXTURE.ecrSaid);
+      if (!ecr) { toast('fixture 內找不到 ECR 憑證'); return; }
+      const previous = state.delegation?.d, registryId = state.registry?.i;
+      state.sims = state.sims.filter(m => !(m.ked.d === previous || (m.ked.t === 'vcp' && m.ked.i === registryId) || (['iss', 'rev'].includes(m.ked.t) && m.ked.i === previous)));
+      state.tampered = false; state.tamperedDelegation = null; state.clockOffsetMs = 0;
+      const ttlInput = parseInt($('#fTtl').value, 10), ttl = Number.isFinite(ttlInput) ? Math.min(1440, Math.max(1, ttlInput)) : 10;
+      const now = simulatedNow(), expires = new Date(now.getTime() + ttl * 60000);
+      const nonce = K.cesrEncode('E', crypto.getRandomValues(new Uint8Array(32)));
+      state.registry = state.registry || K.buildRegistryInception(ecr.a.i, nonce);
+      state.delegation = K.buildAgentDelegation({ roleCredential: ecr, agentAid: state.agent.aid, registry: state.registry.i, purpose: $('#fPurpose').value.trim() || 'unspecified', scope: readScope(), expires: expires.toISOString(), dt: now.toISOString(), ttlMinutes: ttl });
+      state.iss = K.buildIssuance(state.delegation.d, state.registry.i, now.toISOString());
+      state.sims.push(K.asMessage(state.registry), K.asMessage(state.iss), K.asMessage(state.delegation));
+      state.tamperedDelegation = { ...state.delegation, a: { ...state.delegation.a, scope: { ...state.delegation.a.scope, allow: [...state.delegation.a.scope.allow, ...TAMPER_SCOPE] } } };
+      $('#delegationPayload').textContent = JSON.stringify(state.delegation, null, 2);
+      audit('Delegation ACDC issued by ECR holder', 'DELEGATION_ISSUED', `SAID ${state.delegation.d} · edge role→${short(FIXTURE.ecrSaid)} (I2I) · iss ${short(state.iss.d)} · expires ${expires.toISOString()} · TEL simulated, not anchored (holder private key not in fixture)`, 'sim');
+      ['#requestTool', '#revokeDelegation', '#revokeEcr', '#revokeLe', '#expireMandate', '#tamperScope', '#reissue', '#undoSim'].forEach(s => $(s).disabled = false);
+      renderDecision(null); runVerification(true); toast('委任憑證已簽發（模擬 TEL）');
+    }
+
+    /* ------------------------------------------------------ 04 selective disclosure */
+    const CARBON_FIXTURE = { product: { gtin: '4710002048007', name: '精密齒輪組 VF-2048', batch: 'B2026-08' }, carbon: { value_kgco2e: 12.4, unit: 'kgCO2e/unit', method: 'ISO 14067:2018', period: '2026-Q2', boundary: 'cradle-to-gate' }, process: { energy_profile: { grid_kwh: 3.1, solar_kwh: 1.2, gas_m3: 0.4 }, recipe: ['alloy-X 62%', 'coating-Y 3%', 'lubricant-Z 0.5%'], suppliers: ['S-001 板材', 'S-014 塗層', 'S-027 熱處理'] }, audit: { verifier_lei: '5493001KJTIIGC8Y1R12', report_said: 'EAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA', scope: 'third-party verification (synthetic)' } };
+    const leCredential = () => state.messages.map(m => m.ked).find(k => k?.d === 'EHRFwPbmP81ju2sOBeIXAFbfah1gd7JPfe5hEL0sZPqN');
+    const selectedBlocks = () => [...document.querySelectorAll('#discloseBoxes input')].filter(i => i.checked).map(i => i.dataset.block);
+    function issueCarbon() {
+      const le = leCredential(); if (!le) { toast('fixture 尚未載入'); return; }
+      state.carbon = K.buildCarbonCredential({ leCredential: le, registry: le.ri, dt: simulatedNow().toISOString(), ...CARBON_FIXTURE }); state.carbonTampered = false;
+      $('#carbonTitle').textContent = `碳足跡 VC ${short(state.carbon.d)} · ${K.serialize(state.carbon).length} bytes`;
+      $('#carbonPayload').textContent = JSON.stringify(state.carbon, null, 2);
+      $('#carbonVerdict').textContent = '尚未出示'; $('#carbonChecks').innerHTML = ''; $('#carbonPresented').textContent = '等待出示…';
+      audit('Carbon-footprint VC issued by supplier LE', 'CARBON_VC_ISSUED', `SAID ${state.carbon.d} · issuer ${short(le.a.i)} (LEI ${le.a.LEI}) · edge le→${short(le.d)} (I2I) · a.d over most-compact form · 4 sub-blocks SAIDed · synthetic product data`, 'sim');
+      ['#presentCarbon', '#tamperCarbon', '#presentFull', '#resetCarbon'].forEach(sel => $(sel).disabled = false);
+      $('#issueCarbon').textContent = '重新簽發碳足跡 VC'; toast('碳足跡 VC 已簽發（合成資料）');
+    }
+    function scopeGate(blocks) {
+      if (!state.delegation) return { ok: true, actor: 'supplier LE (no agent)' };
+      const scope = state.delegation.a.scope, needed = blocks.map(b => K.CARBON_SCHEMA.scopeTags[b]);
+      const denied = needed.filter(tag => scope.deny.includes(tag) || !scope.allow.includes(tag));
+      return { ok: denied.length === 0, actor: `agent ${short(state.agent?.aid)}`, denied };
+    }
+    async function presentCarbon(blocks = selectedBlocks()) {
+      if (!state.carbon) return;
+      if (!state.report) await runVerification(true);
+      const gate = scopeGate(blocks);
+      if (!gate.ok) {
+        $('#carbonVerdict').textContent = `SCOPE_DENIED · ${gate.denied.join(', ')}`; $('#carbonSummary').textContent = '政策閘門在出示前擋下：Agent 的委任 scope 不允許讀取這些區塊，驗證方什麼都沒收到。';
+        renderChecks($('#carbonChecks'), [{ ok: false, label: `Policy gate · ${gate.actor} may not disclose ${gate.denied.join(', ')}`, detail: `delegation ${short(state.delegation.d)} · allow ${state.delegation.a.scope.allow.join(', ')} · deny ${state.delegation.a.scope.deny.join(', ')}`, level: 'POLICY' }]);
+        $('#carbonPresented').textContent = '(nothing presented)';
+        audit('Carbon VC presentation blocked by delegation scope', 'SCOPE_DENIED', `${gate.actor} requested ${blocks.join(', ')} · denied ${gate.denied.join(', ')} · tool_execution=false`, 'deny'); toast('scope 政策閘門拒絕出示'); return;
+      }
+      const source = state.carbonTampered ? { ...state.carbon, a: { ...state.carbon.a, carbon: { ...state.carbon.a.carbon, value_kgco2e: 2.4 } } } : state.carbon;
+      const presentation = K.disclose(source, blocks);
+      const result = K.verifyDisclosure(presentation, state.report);
+      const accept = result.decision === 'ACCEPT_CARBON_CLAIM';
+      $('#carbonVerdict').textContent = `${result.decision}${accept ? ` · ${result.carbon.value_kgco2e} ${result.carbon.unit}` : ''}`;
+      $('#carbonSummary').textContent = accept ? `驗證方看到：${result.disclosedBlocks.join('、')}（${result.bytes} bytes，完整版 ${K.serialize(state.carbon).length} bytes）；只拿到 SAID：${result.withheldBlocks.join('、') || '無'}。每個 SAID 都已重算，邊鏈回到 LE vLEI → QVI → GLEIF root。` : `拒絕：${result.checks.filter(c => !c.ok).map(c => c.label).join('；')}`;
+      renderChecks($('#carbonChecks'), result.checks);
+      $('#carbonPresented').textContent = JSON.stringify(presentation, null, 2);
+      audit(`Carbon VC presented by ${gate.actor}`, result.decision, `disclosed ${result.disclosedBlocks.join(', ')} · withheld ${result.withheldBlocks.join(', ') || 'none'} · ${result.bytes} bytes · a.d ${short(presentation.a.d)} · d ${short(presentation.d)}`, accept ? '' : 'deny');
+      toast(accept ? `品牌商接受碳排主張：${result.carbon.value_kgco2e} kgCO₂e` : `拒絕：${result.decision}`);
+    }
+    $('#issueCarbon').onclick = issueCarbon;
+    $('#presentCarbon').onclick = () => presentCarbon();
+    $('#presentFull').onclick = () => presentCarbon(['product', 'carbon', 'process']);
+    $('#tamperCarbon').onclick = () => { state.carbonTampered = true; audit('Carbon value tampered in transit', 'TAMPER_SIMULATED', 'a.carbon.value_kgco2e 12.4 → 2.4，未重算 a.carbon.d／a.d／d', 'sim'); presentCarbon(); };
+    $('#resetCarbon').onclick = () => { state.carbonTampered = false; issueCarbon(); };
+
+    /* ------------------------------------------------------------ 05 lifecycle */
+    function renderDecision(report) {
+      const box = $('#decision');
+      if (!report) { box.className = 'decision idle'; box.querySelector('.decision-icon').textContent = '·'; $('#decisionCode').textContent = 'PENDING'; $('#decisionTitle').textContent = '尚未有請求'; $('#decisionText').textContent = '按「Agent 請求工具」重新走整條鏈。'; $('#decisionChecks').innerHTML = ''; return; }
+      const code = report.decision.code, allow = code.startsWith('ALLOW'), copy = DECISIONS[code] || DECISIONS.DENY_VERIFICATION_FAILED;
+      box.className = `decision ${allow ? '' : 'deny'}`; box.querySelector('.decision-icon').textContent = allow ? '✓' : '✗';
+      $('#decisionCode').textContent = `${code} · tool_execution=${report.decision.tool_execution}`; $('#decisionTitle').textContent = copy[0]; $('#decisionText').textContent = copy[1];
+      const leaf = report.credentials.at(-1);
+      const rows = [...report.checks.filter(c => !c.ok), ...report.credentials.flatMap(c => c.checks.filter(x => !x.ok).map(x => ({ ...x, label: `${c.schemaKey} · ${x.label}`, level: 'BROWSER' })))];
+      renderChecks($('#decisionChecks'), rows.length ? rows : [{ ok: true, label: `${leaf?.schemaKey || 'ACDC'} · all checks passed`, detail: leaf ? leaf.checks.map(x => x.label).join(' · ') : '', level: 'BROWSER' }, { ok: true, label: 'Scope enforced after ALLOW', detail: `allow ${state.delegation?.a.scope.allow.length ?? 0} · deny ${state.delegation?.a.scope.deny.length ?? 0} · confirm ${state.delegation?.a.scope.confirm.length ?? 0} — deny／confirm 項目仍由政策閘門攔截`, level: 'POLICY' }]);
+    }
+    async function requestTool() {
+      const button = $('#requestTool'); button.disabled = true; button.textContent = '重走信任鏈…';
+      const report = await K.verifyChain(activeMessages(), verifyOptions());
+      state.report = report; state.lastDecision = report.decision;
+      renderChain(report); renderChecks($('#checkList'), report.checks); renderDecision(report);
+      const allow = report.decision.code.startsWith('ALLOW');
+      audit('Agent tool request evaluated', report.decision.code, `leaf ${short(report.decision.leaf)} · tool_execution=${report.decision.tool_execution} · root=${state.root} · now=${simulatedNow().toISOString()}`, allow ? '' : 'deny');
+      button.disabled = false; button.textContent = 'Agent 再次請求工具'; toast(allow ? '允許：信任鏈完整' : `拒絕：${report.decision.code}`);
+      return report;
+    }
+    function revokeCredential(said, label, by) {
+      const keds = allMessages().map(m => m.ked), cred = keds.find(k => k.d === said);
+      if (!cred) return;
+      if (keds.some(k => k.t === 'rev' && k.i === said)) { toast(`${label} 已是 REVOKED`); return; }
+      const iss = keds.find(k => k.t === 'iss' && k.i === said);
+      const rev = K.buildRevocation(said, cred.ri, iss?.d || 'EAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA', simulatedNow().toISOString());
+      state.sims.push(K.asMessage(rev));
+      audit(`${label} revoked (simulated TEL)`, 'TEL_REV_EVENT', `rev ${rev.d} · credential ${short(said)} · registry ${short(cred.ri)} · by ${by} · 未寫入真實 TEL`, 'sim');
+      toast(`${label} 已撤銷（模擬）`); requestTool();
+    }
+    const findCred = key => state.report?.credentials.find(c => c.schemaKey === key)?.said || state.messages.map(m => m.ked).find(k => K.schemaBySaid(k.s)?.key === key)?.d;
+    async function rotateAgent() {
+      if (!state.agent) return;
+      const { icp, next } = state.agent;
+      const newNext = await crypto.subtle.generateKey({ name: 'Ed25519' }, true, ['sign', 'verify']);
+      const nextPub = new Uint8Array(await crypto.subtle.exportKey('raw', next.publicKey)), newNextPub = new Uint8Array(await crypto.subtle.exportKey('raw', newNext.publicKey));
+      const prior = state.sims.filter(m => m.ked.i === state.agent.aid).at(-1).ked;
+      const rot = K.saidify({ v: K.versionString('KERI', 'JSON', 0), t: 'rot', d: K.DUMMY, i: state.agent.aid, s: (parseInt(prior.s, 16) + 1).toString(16), p: prior.d, kt: '1', k: [K.cesrEncode('D', nextPub)], nt: '1', n: [K.blake3Digest(new TextEncoder().encode(K.cesrEncode('D', newNextPub)))], bt: '0', br: [], ba: [], a: [] }).obj;
+      const sig = new Uint8Array(await crypto.subtle.sign({ name: 'Ed25519' }, next.privateKey, K.saidify(rot).raw));
+      state.sims.push(K.asMessage(rot, [K.encodeIndexedSig(sig, 0)]));
+      state.agent = { ...state.agent, current: next, next: newNext }; state.rotations++;
+      audit('Agent key rotated (pre-rotation honoured)', 'KEL_ROT_EVENT', `rot ${rot.d} · s=${rot.s} · new k[0] ${short(rot.k[0])} 等於 icp 承諾的 next-key digest · 委任憑證的 issuee AID 不變，授權延續`, 'sim');
+      toast('Agent 金鑰已輪替；AID 不變');
+    }
+    $('#loadFixture').onclick = loadFixture;
+    $('#verifyBrowser').onclick = () => runVerification();
+    $('#createAgent').onclick = createAgent;
+    $('#issueDelegation').onclick = issueDelegation;
+    $('#requestTool').onclick = requestTool;
+    $('#revokeDelegation').onclick = () => state.delegation && revokeCredential(state.delegation.d, 'Agent delegation', 'ECR holder (simulated)');
+    $('#revokeEcr').onclick = () => revokeCredential(findCred('ECR'), 'ECR credential', 'QVI (simulated)');
+    $('#revokeLe').onclick = () => revokeCredential(findCred('LE'), 'Legal Entity vLEI', 'QVI (simulated)');
+    $('#expireMandate').onclick = () => { if (!state.delegation) return; state.clockOffsetMs += (state.delegation.a.ttlMinutes + 1) * 60000; audit('Clock advanced past mandate TTL', 'CLOCK_SIMULATED', `now=${simulatedNow().toISOString()} · expires=${state.delegation.a.expires}`, 'sim'); requestTool(); };
+    $('#tamperScope').onclick = () => { if (!state.delegation) return; state.tampered = true; audit('Delegation scope tampered in transit', 'TAMPER_SIMULATED', `scope.allow 追加 ${TAMPER_SCOPE.join('、')}，但未重算 a.d／d`, 'sim'); requestTool(); };
+    $('#rotateAgent').onclick = rotateAgent;
+    $('#reissue').onclick = () => { state.tampered = false; issueDelegation(); requestTool(); };
+    function clearDelegation(reason) { state.sims = state.sims.filter(m => m.ked.t === 'icp' || m.ked.t === 'rot'); state.delegation = null; state.tamperedDelegation = null; state.iss = null; state.tampered = false; state.clockOffsetMs = 0; $('#delegationPayload').textContent = '等待簽發…'; ['#requestTool', '#revokeDelegation', '#revokeEcr', '#revokeLe', '#expireMandate', '#tamperScope', '#reissue', '#undoSim'].forEach(sel => $(sel).disabled = true); renderDecision(null); if (state.report) runVerification(true); audit('Simulated TEL events cleared', 'SIM_RESET', reason); }
+    $('#undoSim').onclick = () => clearDelegation('fixture 回到原始訊息（保留 Agent AID）；沒有委任就不能請求工具');
+    document.querySelectorAll('.root-switch button').forEach(b => b.onclick = () => { state.root = b.dataset.root; document.querySelectorAll('.root-switch button').forEach(x => x.classList.toggle('active', x === b)); audit('Root of trust policy switched', `ROOT_${state.root.toUpperCase()}`, K.ROOT_OF_TRUST[state.root].aid, state.root === 'production' ? 'sim' : ''); if (state.report) (state.delegation ? requestTool() : runVerification(true)); });
+    $('#resetAll').onclick = () => location.reload();
+
+    /* -------------------------------------------------------------- 05 evidence */
+    async function buildPacket() {
+      const packet = { schema: 'verifyfirst.update-trust-evidence.v1', generated_at: new Date().toISOString(), demo_mode: true, fixture: { source: FIXTURE.remote, pinned_commit: FIXTURE.commit, sha256_local: state.sha.local, sha256_remote: state.sha.remote, messages: state.messages.length }, root_of_trust: { policy: state.root, aid: rootAid() }, agent: state.agent ? { aid: state.agent.aid, inception: state.agent.icp, rotations: state.rotations } : null, carbon_credential: state.carbon, delegation: state.delegation, delegation_as_presented: state.tampered ? state.tamperedDelegation : state.delegation, tampered_in_transit: state.tampered, simulated_events: state.sims.map(m => m.ked).filter(k => !k.v?.startsWith('ACDC')), verification: state.report ? { checks: state.report.checks, credentials: state.report.credentials, decision: state.report.decision } : null, audit: state.audit, verifier: { module: 'update-trust/said.js', browser_layers: ['BLAKE3_SAID', 'ED25519_KEL_SIGNATURES', 'ACDC_EDGES_I2I', 'SCHEMA_SAID_PIN', 'TEL_STATUS', 'KEL_ANCHORING', 'EXPIRY'], not_verified_in_browser: ['witness receipts', 'live key state via OOBI', 'duplicity / watchers', 'production root policy beyond AID comparison'] } };
+      const bytes = new TextEncoder().encode(JSON.stringify(packet)); packet.packet_sha256 = await sha256Hex(bytes);
+      state.packet = packet; $('#packetBadge').textContent = 'PACKET · READY'; $('#packetDigest').textContent = `SHA-256 ${packet.packet_sha256} · ${Math.round(bytes.length / 1024)} KB · ${state.audit.length} audit events`;
+      return packet;
+    }
+    $('#downloadPacket').onclick = async () => { const packet = await buildPacket(); const blob = new Blob([JSON.stringify(packet, null, 2)], { type: 'application/json' }), url = URL.createObjectURL(blob), a = document.createElement('a'); a.href = url; a.download = `verifyfirst-update-trust-${Date.now()}.json`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000); audit('Evidence packet exported', 'EVIDENCE_EXPORTED', `sha256 ${packet.packet_sha256}`); toast('Evidence Packet 已下載'); };
+
+    /* ----------------------------------------------------------- live backend */
+    async function fetchWithTimeout(url, options = {}, timeout = 20000) { const controller = new AbortController(), timer = setTimeout(() => controller.abort(), timeout); try { return await fetch(url, { ...options, signal: controller.signal }); } finally { clearTimeout(timer); } }
+    function setBackendStep(index, cls, label) { const step = $('#backendFlow')?.children[index]; if (!step) return; step.className = cls; step.textContent = label; }
+    async function sendBackend() {
+      const button = $('#sendBackend'), stateEl = $('#backendState'), detail = $('#backendDetail'); if (button.disabled) return;
+      button.disabled = true; button.textContent = '啟動 verifier（cold start 最長 90 秒）…'; stateEl.className = 'pill warn'; stateEl.textContent = 'WARMING';
+      [0, 1, 2].forEach(i => setBackendStep(i, '', `${['HEALTH', 'PRESENTATION', 'AUTHORIZATION'][i]} · PENDING`));
+      try {
+        const health = await fetchWithTimeout(`${BACKEND.base}/health`, {}, 90000); if (!health.ok) throw new Error(`HEALTH_HTTP_${health.status}`);
+        setBackendStep(0, 'ok', 'HEALTH · 200 READY'); stateEl.className = 'pill ok'; stateEl.textContent = 'BACKEND LIVE';
+        const cesr = await (await fetch(FIXTURE.local, { cache: 'no-store' })).text();
+        const presentation = await fetchWithTimeout(`${BACKEND.base}/presentations/${BACKEND.said}`, { method: 'PUT', headers: { 'Content-Type': 'application/json+cesr' }, body: cesr }, 45000);
+        const bodyText = await presentation.text(); let body; try { body = JSON.parse(bodyText); } catch { body = { msg: bodyText }; }
+        if (presentation.status === 202) {
+          setBackendStep(1, 'ok', 'PRESENTATION · 202 ACCEPTED');
+          for (let attempt = 0; attempt < 8; attempt++) {
+            await new Promise(r => setTimeout(r, 1500));
+            const auth = await fetchWithTimeout(`${BACKEND.base}/authorizations/${BACKEND.holderAid}`, {}, 15000);
+            if (auth.status === 404) { setBackendStep(2, '', 'AUTHORIZATION · PENDING'); continue; }
+            const authText = await auth.text(); let authBody; try { authBody = JSON.parse(authText); } catch { authBody = { msg: authText }; }
+            const valid = auth.status === 200;
+            setBackendStep(2, valid ? 'ok' : 'invalid', valid ? 'AUTHORIZATION · VALID' : `AUTHORIZATION · HTTP ${auth.status}`); stateEl.className = `pill ${valid ? 'ok' : 'bad'}`; stateEl.textContent = valid ? 'VALID' : auth.status === 401 ? 'INVALID' : 'FAIL CLOSED';
+            detail.textContent = `${auth.status} · ${authBody.msg || JSON.stringify(authBody)}`; audit('Live keripy verifier responded', valid ? 'BACKEND_VALID' : `BACKEND_HTTP_${auth.status}`, detail.textContent, valid ? '' : 'deny'); return;
+          }
+          throw new Error('AUTHORIZATION_TIMEOUT');
+        }
+        setBackendStep(1, 'invalid', `PRESENTATION · ${presentation.status} REJECTED`); setBackendStep(2, 'invalid', 'AUTHORIZATION · NOT GRANTED'); stateEl.className = 'pill bad'; stateEl.textContent = 'INVALID';
+        detail.textContent = `真實後端拒絕：${body.msg || JSON.stringify(body)} · fixture 的 root 為測試 AID，production verifier 正確拒絕。`;
+        audit('Live keripy verifier rejected fixture', `BACKEND_HTTP_${presentation.status}`, detail.textContent, 'deny');
+      } catch (error) {
+        stateEl.className = 'pill bad'; stateEl.textContent = 'FAIL CLOSED'; detail.textContent = `${error.name === 'AbortError' ? 'BACKEND_TIMEOUT' : error.message} · 未產生任何 VALID 判定。`; audit('Live keripy verifier unavailable', 'BACKEND_FAIL_CLOSED', detail.textContent, 'deny');
+      } finally { button.disabled = false; button.textContent = '重新送入 live verifier'; }
+    }
+    $('#sendBackend').onclick = sendBackend;
+
+    /* ------------------------------------------------------------------- tour */
+    const scenes = [
+      { at: 0, chapter: '01 · OFFICIAL CHAIN', line: '載入 GLEIF 官方 vlei-verifier 的 regression fixture：GLEIF → QVI → Legal Entity → ECR，共 38 則 CESR 訊息。', action: '本地副本與 GitHub raw 逐位元比對 SHA-256；不是自己畫的圖，是 keripy 產生的真實 KEL／TEL／ACDC。', run: async () => { await loadFixture(); $('#stepFixture').scrollIntoView({ block: 'start' }); } },
+      { at: 9, chapter: '02 · BROWSER VERIFIES', line: '瀏覽器重算 22 個 Blake3 SAID、驗 11 個 Ed25519 KEL 簽章、走 4 條 I2I 邊鏈，並核對官方 schema SAID 與 TEL 錨定。', action: '所有檢查標示 BROWSER／POLICY／BACKEND 層級；witness receipts 與即時 key state 明確留給 keripy 後端。', run: async () => { await runVerification(); $('#stepVerify').scrollIntoView({ block: 'start' }); } },
+      { at: 21, chapter: '03 · AGENT DELEGATION', line: 'Agent 用 KERI inception 自我認證出 AID；ECR 持有人簽發一張 10 分鐘、單一目的、明列 allow／deny／confirm 的委任 ACDC。', action: '委任的邊 role→ECR 用官方 I2I 運算子鏈回真實 ECR 憑證；schema 標示為提案，不冒充 GLEIF 官方類型。', run: async () => { await createAgent(); issueDelegation(); $('#stepAgent').scrollIntoView({ block: 'start' }); } },
+      { at: 30, chapter: '04 · DISCLOSE ONLY CARBON', line: '供應商用 LE vLEI 簽發碳足跡 VC；Agent 只出示 product 與 carbon，process 與 audit 只剩 SAID。品牌商重算所有 SAID、沿 I2I 邊鏈回到 GLEIF root，接受 12.4 kgCO₂e，卻看不到配方。', action: '同一張憑證，揭露程度由持有人決定；驗證方不需要信任任何人。', run: async () => { issueCarbon(); await presentCarbon(['product', 'carbon']); $('#stepCarbon').scrollIntoView({ block: 'start' }); } },
+      { at: 40, chapter: '05 · REQUEST → ALLOW', line: 'Agent 請求工具：驗證方重走整條鏈，四層 ISSUED，ALLOW_CHAIN_VERIFIED，但 deny／confirm 項目仍被政策閘門攔住。', action: '允許不等於全權；scope 才是行動邊界。', run: async () => { await requestTool(); $('#stepLifecycle').scrollIntoView({ block: 'start' }); } },
+      { at: 47, chapter: '06 · UPSTREAM REVOKE', line: 'QVI 撤銷 ECR：委任本身沒動，決策卻立刻變成 DENY_UPSTREAM_ECR_REVOKED，tool_execution=false。', action: '信任是鏈，任何一環的 TEL 出現 rev，下游授權連帶失效。', run: async () => { revokeCredential(findCred('ECR'), 'ECR credential', 'QVI (simulated)'); } },
+      { at: 54, chapter: '07 · FAIL CLOSED', line: '切到 GLEIF production root：fixture 的測試 root 立即被拒，DENY_ROOT_MISMATCH——與 live keripy verifier 的判定一致。', action: '沒有綠燈可以被說服；Evidence Packet 含所有 SAID，任何人可用 said.js 重算。', run: async () => { $('#rootProduction').click(); await buildPacket(); $('#stepAudit').scrollIntoView({ block: 'start' }); } },
+    ];
+    let tourTimer = null, tourStart = 0, tourStage = -1;
+    function showScene(index) { if (index < 0 || index >= scenes.length || index === tourStage) return; tourStage = index; const s = scenes[index]; $('#tourChapter').textContent = s.chapter; $('#tourLine').textContent = s.line; $('#tourAction').textContent = s.action; s.run(); }
+    function tourTick() { const elapsed = (performance.now() - tourStart) / 1000 / timeScale, remaining = Math.max(0, 60 - elapsed); $('#tourClock').textContent = `${String(Math.floor(remaining / 60)).padStart(2, '0')}:${String(Math.ceil(remaining % 60)).padStart(2, '0')}`; const idx = scenes.reduce((acc, s, i) => elapsed >= s.at ? i : acc, -1); if (idx > tourStage) showScene(idx); if (elapsed >= 60) { clearInterval(tourTimer); tourTimer = null; $('#tourClock').textContent = '00:00'; $('#tourChapter').textContent = 'COMPLETE · REPLAYABLE'; $('#tourLine').textContent = '60 秒完成：官方鏈、瀏覽器驗證、Agent 委任、只揭露碳排、上游撤銷、production root 拒絕，全程 fail closed。'; $('#tourAction').textContent = '可自由操作生命週期按鈕，或下載 Evidence Packet。'; tourStage = -1; } }
+    function startTour() { if (tourTimer) clearInterval(tourTimer); location.hash = ''; tourStage = -1; if (state.root !== 'production') {} else { state.root = 'fixture'; document.querySelectorAll('.root-switch button').forEach(x => x.classList.toggle('active', x.dataset.root === 'fixture')); } if (state.delegation) clearDelegation('tour restarted'); tourStart = performance.now(); $('#tourConsole').classList.add('active'); showScene(0); tourTimer = setInterval(tourTick, 100 * timeScale); tourTick(); }
+    $('#startTour').onclick = startTour;
+    $('#nextTour').onclick = () => { if (!tourTimer && tourStage < 0) { startTour(); return; } const index = Math.min(tourStage + 1, scenes.length - 1); tourStart = performance.now() - scenes[index].at * 1000 * timeScale; showScene(index); tourTick(); };
+    $('#exitTour').onclick = () => { if (tourTimer) clearInterval(tourTimer); tourTimer = null; tourStage = -1; $('#tourConsole').classList.remove('active'); };
+    if (new URLSearchParams(location.search).has('autoload')) loadFixture();
+  </script>
+</body>
+</html>
